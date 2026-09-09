@@ -1,0 +1,43 @@
+name: Auto Merge Developer Branches to Development
+
+on:
+  push:
+    branches:
+      - 'dev_*'
+      - 'dev-*'
+      - 'dev/*'
+
+permissions:
+  contents: write
+
+jobs:
+  auto-merge:
+    name: Merge Dev Branch into Development
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge developer branch into development
+        run: |
+          DEV_BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Triggered by push to branch: $DEV_BRANCH"
+          
+          # Checkout development branch
+          git checkout development
+          git pull origin development
+          
+          # Merge developer branch into development
+          echo "Merging origin/$DEV_BRANCH into development..."
+          git merge "origin/$DEV_BRANCH" --no-ff -m "auto-merge: $DEV_BRANCH into development [skip ci]"
+          
+          # Push merged changes back to origin development
+          git push origin development

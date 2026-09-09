@@ -1,7 +1,14 @@
-import { apiPost } from './api.service';
+import ApiService, { apiPost } from "./api.service";
 
-export const login = (credentials) => apiPost('/auth/login', credentials);
+export const login = (credentials) =>
+  ApiService.login(credentials).then((res) => res.data.data);
 
-export const signup = (payload) => apiPost('/auth/signup', payload);
+export const signup = (formData) => {
+  const { confirmPassword, ...payload } = formData;
 
-export const logout = () => apiPost('/auth/logout');
+  return ApiService.signup(payload);
+};
+
+export const logout = () => {
+  return ApiService.logout();
+};

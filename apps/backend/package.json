@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "seed:admin": "node prisma/seedAdmin.js"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "joi": "^18.2.3",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {

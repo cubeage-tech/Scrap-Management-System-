@@ -1,12 +1,6 @@
-import axios from 'axios';
-import { API_BASE_URL, API_TIMEOUT_MS } from '../constants/serverUrl.constant';
+import ApiInterceptor from '../services/interceptor.service';
 
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: API_TIMEOUT_MS,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// Use the single axios instance from the interceptor service
+const axiosInstance = ApiInterceptor.init();
 
 export default axiosInstance;

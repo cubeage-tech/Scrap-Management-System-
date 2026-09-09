@@ -30,3 +30,5 @@ Thumbs.db
 
 # Turbo (only if you use it later)
 .turbo/
+
+*.md

@@ -32,7 +32,7 @@ const SECTOR_OPTIONS = [
   "Manufacturing",
 ];
 
-const STATUS_VARIANTS = {
+export const STATUS_VARIANTS = {
   Approved: "success",
   Pending: "warning",
   Rejected: "danger",

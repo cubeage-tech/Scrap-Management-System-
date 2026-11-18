@@ -5,6 +5,7 @@ import {
   updateListingService,
   publishListingService,
   cancelListingService,
+  getListingBidsService,
 } from "./listing.service.js";
 
 export const createListing = async (req, res) => {
@@ -48,14 +49,31 @@ export const getListings = async (req, res) => {
       status,
       sellingMode,
       categoryId,
+      mine,
+      ownerBusinessType,
       page,
       limit,
     } = req.query;
+
+    if (mine === "true" && !req.user?.organisationId) {
+      return res.status(403).json({
+        success: false,
+        message: "User must belong to an organisation",
+      });
+    }
+
+    const VALID_BUSINESS_TYPES = ["INDUSTRY", "DEALER", "BUYER"];
+    const resolvedOwnerBusinessType =
+      ownerBusinessType && VALID_BUSINESS_TYPES.includes(ownerBusinessType.toUpperCase())
+        ? ownerBusinessType.toUpperCase()
+        : undefined;
 
     const result = await getListingsService({
       status,
       sellingMode,
       categoryId,
+      ownerId: mine === "true" ? req.user.organisationId : undefined,
+      ownerBusinessType: resolvedOwnerBusinessType,
       page,
       limit,
     });
@@ -97,7 +115,8 @@ export const updateListing = async (req, res) => {
 
     const listing = await updateListingService(
       id,
-      req.body
+      req.body,
+      req.user?.organisationId
     );
 
     return res.status(200).json({
@@ -106,7 +125,7 @@ export const updateListing = async (req, res) => {
       data: listing,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.statusCode || 400).json({
       success: false,
       message: error.message,
     });
@@ -118,7 +137,7 @@ export const publishListing = async (req, res) => {
     const { id } = req.params;
 
     const listing =
-      await publishListingService(id);
+      await publishListingService(id, req.user?.organisationId);
 
     return res.status(200).json({
       success: true,
@@ -126,7 +145,7 @@ export const publishListing = async (req, res) => {
       data: listing,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.statusCode || 400).json({
       success: false,
       message: error.message,
     });
@@ -138,7 +157,7 @@ export const cancelListing = async (req, res) => {
     const { id } = req.params;
 
     const listing =
-      await cancelListingService(id);
+      await cancelListingService(id, req.user?.organisationId);
 
     return res.status(200).json({
       success: true,
@@ -146,9 +165,23 @@ export const cancelListing = async (req, res) => {
       data: listing,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.statusCode || 400).json({
       success: false,
       message: error.message,
     });
   }
 };
+
+export const getListingBids = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await getListingBidsService(id);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return res.status(error.statusCode || 404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

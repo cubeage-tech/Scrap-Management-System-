@@ -77,3 +77,54 @@ export const deleteScrap = async (req, res) => {
     res.status(error.statusCode || 400).json({ success: false, message: error.message });
   }
 };
+
+// 6. Upload Scrap Images
+export const uploadScrapImages = async (req, res) => {
+  try {
+    const organisationId = req.user.organisationId;
+    const { id } = req.params;
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No images uploaded' });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const images = await scrapService.addScrapImages(id, organisationId, req.files, baseUrl);
+    res.status(201).json({ success: true, data: images, message: `${images.length} image(s) uploaded successfully` });
+  } catch (error) {
+    console.error('Error uploading scrap images:', error);
+    res.status(error.statusCode || 400).json({ success: false, message: error.message });
+  }
+};
+
+// 7. Delete Scrap Image
+export const deleteScrapImage = async (req, res) => {
+  try {
+    const organisationId = req.user.organisationId;
+    const { id, imageId } = req.params;
+    await scrapService.deleteScrapImage(id, imageId, organisationId);
+    res.status(200).json({ success: true, message: 'Image deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting scrap image:', error);
+    res.status(error.statusCode || 400).json({ success: false, message: error.message });
+  }
+};
+
+// 8. Import Purchased Sale to Inventory
+export const importSaleToInventory = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const organisationId = req.user.organisationId;
+    const { saleId } = req.params;
+
+    if (!organisationId) {
+      return res.status(403).json({ success: false, message: 'User must belong to an organisation' });
+    }
+
+    const scrap = await scrapService.convertSaleToInventory(saleId, organisationId, userId);
+    res.status(201).json({ success: true, data: scrap, message: 'Sale imported to inventory successfully' });
+  } catch (error) {
+    console.error('Error importing sale to inventory:', error);
+    res.status(error.statusCode || 400).json({ success: false, message: error.message });
+  }
+};

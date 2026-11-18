@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -10,154 +10,20 @@ import {
 } from "lucide-react";
 
 import MaterialTable from "../../components/common/MaterialTable";
+import AddScrapModal from "../../components/common/AddScrapModal";
+import ApiService from "../../core/services/api.service";
 import { myScrapTableConfig } from "../../configs/tables/myScrapTable.config";
-import MyScrapAddModal from "../../components/industry/MyScrapAddModal";
 import MyScrapEditModal from "../../components/industry/MyScrapEditModal";
 import MyScrapViewModal from "../../components/industry/MyScrapViewModal";
 
-const INITIAL_SCRAP_DATA = [
-  {
-    id: "INV-001",
-    material: "MS Steel Scrap (Heavy Melting)",
-    category: "Steel",
-    weightKg: "24,500 kg",
-    weightRawKg: 24500,
-    qtyUnit: "24.5 MT",
-    qtyRawMT: 24.5,
-    condition: "Grade A",
-    location: "Warehouse A - Bay 3",
-    expPriceMT: "₹38,500",
-    expPriceRaw: 38500,
-    totalValue: 943250,
-    status: "Available",
-    imageUrl: "https://images.unsplash.com/photo-1535813547-99c456a41d4a?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 10, 2026"
-  },
-  {
-    id: "INV-002",
-    material: "Copper Wire Scrap",
-    category: "Copper",
-    weightKg: "3,200 kg",
-    weightRawKg: 3200,
-    qtyUnit: "3.2 MT",
-    qtyRawMT: 3.2,
-    condition: "Grade B",
-    location: "Warehouse B - Bay 1",
-    expPriceMT: "₹5,20,000",
-    expPriceRaw: 520000,
-    totalValue: 1664000,
-    status: "Partially Listed",
-    imageUrl: "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 11, 2026"
-  },
-  {
-    id: "INV-003",
-    material: "Aluminium Extrusion Scrap",
-    category: "Aluminium",
-    weightKg: "8,750 kg",
-    weightRawKg: 8750,
-    qtyUnit: "8.75 MT",
-    qtyRawMT: 8.75,
-    condition: "Grade A",
-    location: "Warehouse A - Bay 7",
-    expPriceMT: "₹1,85,000",
-    expPriceRaw: 185000,
-    totalValue: 1618750,
-    status: "Available",
-    imageUrl: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 12, 2026"
-  },
-  {
-    id: "INV-004",
-    material: "HDPE Plastic Regrind",
-    category: "Plastic",
-    weightKg: "5,600 kg",
-    weightRawKg: 5600,
-    qtyUnit: "5.6 MT",
-    qtyRawMT: 5.6,
-    condition: "Grade B",
-    location: "Warehouse C - Bay 2",
-    expPriceMT: "₹62,000",
-    expPriceRaw: 62000,
-    totalValue: 347200,
-    status: "Fully Listed",
-    imageUrl: "https://images.unsplash.com/photo-1526951521990-620dc14c214b?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 12, 2026"
-  },
-  {
-    id: "INV-005",
-    material: "E-Waste Mixed PCB",
-    category: "Electronic Waste",
-    weightKg: "1,200 kg",
-    weightRawKg: 1200,
-    qtyUnit: "1.2 MT",
-    qtyRawMT: 1.2,
-    condition: "Grade C",
-    location: "Secure Storage - S1",
-    expPriceMT: "₹95,000",
-    expPriceRaw: 95000,
-    totalValue: 114000,
-    status: "Available",
-    imageUrl: "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 13, 2026"
-  },
-  {
-    id: "INV-006",
-    material: "Cast Iron Borings",
-    category: "Steel",
-    weightKg: "18,000 kg",
-    weightRawKg: 18000,
-    qtyUnit: "18 MT",
-    qtyRawMT: 18,
-    condition: "Grade B",
-    location: "Warehouse D - Bay 4",
-    expPriceMT: "₹22,000",
-    expPriceRaw: 22000,
-    totalValue: 396000,
-    status: "Sold",
-    imageUrl: "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 09, 2026"
-  },
-  {
-    id: "INV-007",
-    material: "Brass Turning Scrap",
-    category: "Copper",
-    weightKg: "2,100 kg",
-    weightRawKg: 2100,
-    qtyUnit: "2.1 MT",
-    qtyRawMT: 2.1,
-    condition: "Grade A",
-    location: "Warehouse B - Bay 3",
-    expPriceMT: "₹3,80,000",
-    expPriceRaw: 380000,
-    totalValue: 798000,
-    status: "Available",
-    imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 14, 2026"
-  },
-  {
-    id: "INV-008",
-    material: "Rubber Conveyor Belt Scrap",
-    category: "Rubber",
-    weightKg: "4,200 kg",
-    weightRawKg: 4200,
-    qtyUnit: "4.2 MT",
-    qtyRawMT: 4.2,
-    condition: "Grade C",
-    location: "Warehouse C - Bay 5",
-    expPriceMT: "₹28,000",
-    expPriceRaw: 28000,
-    totalValue: 117600,
-    status: "Available",
-    imageUrl: "https://images.unsplash.com/photo-1578844251758-2f71da64c96f?w=150&auto=format&fit=crop&q=80",
-    dateAdded: "Aug 14, 2026"
-  }
-];
+
 
 const MyScrap = () => {
-  // Inventory state
-  const [scrapList, setScrapList] = useState(INITIAL_SCRAP_DATA);
+  // Inventory state (dynamically loaded from database)
+  const [scrapList, setScrapList] = useState([]);
+
   const [selectedIds, setSelectedIds] = useState([]);
+  const [_isLoading, setIsLoading] = useState(false);
   
   // Filter & Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -178,6 +44,66 @@ const MyScrap = () => {
     setTimeout(() => setToastMsg(""), 3500);
   };
 
+  const fetchScraps = async () => {
+    try {
+      setIsLoading(true);
+      const res = await ApiService.getScraps();
+      if (res.data?.success && res.data.data && res.data.data.length > 0) {
+        const formatted = res.data.data.map((record) => {
+          const totalKg = Number(record.totalQuantityKg || 0);
+          const listedKg = Number(record.listedQuantityKg || 0);
+          const soldKg = Number(record.soldQuantityKg || 0);
+          const availKg = Number(record.availableQuantityKg || (totalKg - listedKg - soldKg));
+          const qtyRawMT = availKg / 1000;
+
+          let statusLabel = "Available";
+          if (record.status === "SOLD_OUT" || soldKg >= totalKg) {
+            statusLabel = "Sold";
+          } else if (record.status === "FULLY_LISTED" || listedKg >= totalKg) {
+            statusLabel = "Fully Listed";
+          } else if (record.status === "PARTIALLY_LISTED" || listedKg > 0) {
+            statusLabel = "Partially Listed";
+          }
+
+          return {
+            id: record.id,
+            material: record.description || record.category?.name || "Scrap Material",
+            category: record.category?.name || "General",
+            categoryId: record.categoryId,
+            weightKg: `${availKg.toLocaleString("en-IN")} kg`,
+            weightRawKg: availKg,
+            qtyUnit: `${qtyRawMT.toFixed(2)} Tons`,
+            qtyRawMT: qtyRawMT,
+            condition: record.condition || "Grade A",
+            location: record.locationLabel || "Warehouse A",
+            expPriceMT: "₹35,000",
+            expPriceRaw: 35000,
+            totalValue: qtyRawMT * 35000,
+            status: statusLabel,
+            imageUrl:
+              record.images && record.images.length > 0
+                ? record.images[0].url
+                : "https://images.unsplash.com/photo-1535813547-99c456a41d4a?w=150&auto=format&fit=crop&q=80",
+            dateAdded: new Date(record.createdAt).toLocaleDateString("en-IN", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+            rawRecord: record,
+          };
+        });
+        setScrapList(formatted);
+      }
+    } catch (err) {
+      console.error("Error fetching industry scraps:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchScraps(); }, []);
+
   // Metrics Calculation (dynamic from current list)
   const metrics = useMemo(() => {
     const totalItems = scrapList.length;
@@ -193,7 +119,7 @@ const MyScrap = () => {
       available,
       listed,
       sold,
-      totalWeight: `${totalWeightMT.toFixed(1)} MT`,
+      totalWeight: `${totalWeightMT.toFixed(1)} Tons`,
       estValue: `₹${totalValue.toLocaleString('en-IN')}`
     };
   }, [scrapList]);
@@ -221,9 +147,7 @@ const MyScrap = () => {
     });
   }, [scrapList, searchQuery, topSearch, statusFilter, categoryFilter]);
 
-  // Row selection state, adapted between MaterialTable's { [id]: true } shape
-  // (used by Material React Table's built-in checkbox column) and the plain
-  // `selectedIds` array that the rest of this page's bulk-action logic uses.
+  // Row selection state
   const rowSelection = useMemo(
     () => Object.fromEntries(selectedIds.map((id) => [id, true])),
     [selectedIds]
@@ -236,23 +160,64 @@ const MyScrap = () => {
   };
 
   // CRUD Operations
-  const handleAddScrap = (newLot) => {
+  const _handleAddScrap = async (newLot) => {
+    try {
+      const payload = {
+        categoryId: newLot.categoryId || undefined,
+        description: newLot.material,
+        totalQuantityKg: newLot.weightRawKg || 1000,
+        condition: newLot.condition,
+        locationLabel: newLot.location,
+      };
+      const res = await ApiService.createScrap(payload);
+      if (res.data?.success) {
+        showToast(`Successfully added ${newLot.material} to database inventory!`);
+        fetchScraps();
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to add scrap to DB:", err);
+    }
     setScrapList(prev => [newLot, ...prev]);
     showToast(`Successfully added ${newLot.material} (${newLot.id}) to inventory!`);
   };
 
-  const handleUpdateScrap = (updatedLot) => {
+  const handleUpdateScrap = async (updatedLot) => {
+    try {
+      if (updatedLot.rawRecord?.id) {
+        await ApiService.updateScrap(updatedLot.rawRecord.id, {
+          description: updatedLot.material,
+          totalQuantityKg: updatedLot.weightRawKg,
+          condition: updatedLot.condition,
+          locationLabel: updatedLot.location,
+        });
+        fetchScraps();
+        showToast(`Updated details for ${updatedLot.id}`);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to update scrap in DB:", err);
+    }
     setScrapList(prev => prev.map(item => item.id === updatedLot.id ? updatedLot : item));
     showToast(`Updated details for ${updatedLot.id}`);
   };
 
-  // MaterialTable shows its own confirmation dialog before calling this, so
-  // no window.confirm is needed here.
-  const handleDeleteScrap = (item) => {
+  const handleDeleteScrap = async (item) => {
+    try {
+      if (item.rawRecord?.id) {
+        await ApiService.deleteScrap(item.rawRecord.id);
+        fetchScraps();
+        showToast(`Deleted ${item.id} from database inventory.`);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to delete scrap from DB:", err);
+    }
     setScrapList(prev => prev.filter(i => i.id !== item.id));
     setSelectedIds(prev => prev.filter(selectedId => selectedId !== item.id));
     showToast(`Deleted ${item.id} from inventory.`);
   };
+
 
   const handleDuplicateScrap = (item) => {
     const nextNum = Math.floor(100 + Math.random() * 900);
@@ -282,11 +247,11 @@ const MyScrap = () => {
       : filteredItems;
 
     if (itemsToExport.length === 0) {
-      alert("No scrap items to export.");
+      showToast("No scrap items to export.");
       return;
     }
 
-    const headers = ["Inventory ID", "Material Name", "Category", "Weight (kg)", "Qty (MT)", "Condition", "Location", "Exp Price (₹/MT)", "Total Value (₹)", "Status", "Date Logged"];
+    const headers = ["Inventory ID", "Material Name", "Category", "Weight (kg)", "Qty (Tons)", "Condition", "Location", "Exp Price (₹/Ton)", "Total Value (₹)", "Status", "Date Logged"];
     const rows = itemsToExport.map(item => [
       `"${item.id}"`,
       `"${item.material.replace(/"/g, '""')}"`,
@@ -512,12 +477,18 @@ const MyScrap = () => {
       />
 
       {/* ================= MODALS ================= */}
-      <MyScrapAddModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddScrap={handleAddScrap}
-        nextId={`INV-00${scrapList.length + 1}`}
-      />
+      {isAddModalOpen && (
+        <AddScrapModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSuccess={() => {
+            fetchScraps();
+            showToast("Successfully added scrap item to inventory!");
+          }}
+          role="INDUSTRY"
+        />
+      )}
+
 
       {!!editingItem && (
         <MyScrapEditModal

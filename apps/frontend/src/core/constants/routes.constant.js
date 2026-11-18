@@ -16,6 +16,7 @@ class RoutePath {
   static LOGIN = "/login";
   static SIGNUP = "/signup";
   static FORGOT_PASSWORD = "/forgot-password";
+  static RESET_PASSWORD = "/reset-password";
 
   // ======================================================
   // SUPER ADMIN
@@ -60,6 +61,8 @@ class RoutePath {
 
   static INDUSTRY_INVENTORY = `${this.INDUSTRY_BASE}/inventory`;
 
+  static INDUSTRY_LISTINGS = `${this.INDUSTRY_BASE}/listings`;
+
   static INDUSTRY_DEALER_MARKETPLACE = `${this.INDUSTRY_BASE}/industry-marketplace`;
 
   static INDUSTRY_ADD_SCRAP = `${this.INDUSTRY_BASE}/scrap/add`;
@@ -78,6 +81,10 @@ class RoutePath {
 
   static INDUSTRY_SETTINGS = `${this.INDUSTRY_BASE}/settings`;
 
+  static INDUSTRY_TENDERS = `${this.INDUSTRY_BASE}/tenders`;
+
+  static INDUSTRY_TENDER_DETAIL = `${this.INDUSTRY_BASE}/tenders/:id`;
+
   static INDUSTRY_ORDERS = `${this.INDUSTRY_BASE}/orders`;
 
   static INDUSTRY_TRANSPORT = `${this.INDUSTRY_BASE}/transport`;
@@ -94,11 +101,32 @@ class RoutePath {
 
   static DEALER_MARKETPLACE = `${this.DEALER_BASE}/marketplace`;
 
-  static DEALER_AUCTIONS = `${this.DEALER_BASE}/auctions`;
+  static DEALER_LIVE_AUCTIONS = `${this.DEALER_BASE}/auctions`;
+
+  static DEALER_QUOTATIONS = `${this.DEALER_BASE}/quotations`;
 
   static DEALER_MY_BIDS = `${this.DEALER_BASE}/bids`;
 
+  static DEALER_WON_AUCTIONS = `${this.DEALER_BASE}/won-auctions`;
+
+  static DEALER_PURCHASED_SCRAP = `${this.DEALER_BASE}/purchased-scrap`;
+
+  static DEALER_SCRAP_INVENTORY = `${this.DEALER_BASE}/scrap-inventory`;
+
+  static DEALER_TENDERS = `${this.DEALER_BASE}/tenders`;
+
+  static DEALER_TENDER_DETAIL = `${this.DEALER_BASE}/tenders/:id`;
+
+  static DEALER_TENDER_SUBMIT  = `${this.DEALER_BASE}/tenders/:id/submit`;
+  static DEALER_TENDER_AWARDS  = `${this.DEALER_BASE}/tender-awards`;
+
   static DEALER_ORDERS = `${this.DEALER_BASE}/orders`;
+
+  static DEALER_REPORTS = `${this.DEALER_BASE}/reports`;
+
+  static DEALER_NOTIFICATIONS = `${this.DEALER_BASE}/notifications`;
+
+  static DEALER_SETTINGS = `${this.DEALER_BASE}/settings`;
 
   static DEALER_TRANSPORT = `${this.DEALER_BASE}/transport`;
 
@@ -113,6 +141,8 @@ class RoutePath {
   static BUYER_DASHBOARD = `${this.BUYER_BASE}/dashboard`;
 
   static BUYER_MARKETPLACE = `${this.BUYER_BASE}/marketplace`;
+
+  static BUYER_QUOTATIONS = `${this.BUYER_BASE}/quotations`;
 
   static BUYER_AUCTIONS = `${this.BUYER_BASE}/auctions`;
 

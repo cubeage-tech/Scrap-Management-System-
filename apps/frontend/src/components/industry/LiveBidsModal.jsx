@@ -4,11 +4,11 @@ const LiveBidsModal = ({ isOpen, onClose, lot, onAcceptBid }) => {
   if (!isOpen || !lot) return null;
 
   const mockBids = [
-    { bidder: "Metro Recyclers Pvt Ltd", bidPrice: "₹37,800/MT", totalAmount: "₹17,01,000", time: "2 mins ago", verified: true, isTop: true },
-    { bidder: "GreenMetal Solutions", bidPrice: "₹37,200/MT", totalAmount: "₹16,74,000", time: "8 mins ago", verified: true, isTop: false },
-    { bidder: "Sanjay Metals Pvt. Ltd.", bidPrice: "₹36,500/MT", totalAmount: "₹16,42,500", time: "15 mins ago", verified: true, isTop: false },
-    { bidder: "National Scrap Corp", bidPrice: "₹35,800/MT", totalAmount: "₹16,11,000", time: "24 mins ago", verified: false, isTop: false },
-    { bidder: "Apex Recyclers LLP", bidPrice: "₹35,000/MT", totalAmount: "₹15,75,000", time: "40 mins ago", verified: true, isTop: false },
+    { bidder: "Metro Recyclers Pvt Ltd", bidPrice: "₹37,800/Ton", totalAmount: "₹17,01,000", time: "2 mins ago", verified: true, isTop: true },
+    { bidder: "GreenMetal Solutions", bidPrice: "₹37,200/Ton", totalAmount: "₹16,74,000", time: "8 mins ago", verified: true, isTop: false },
+    { bidder: "Sanjay Metals Pvt. Ltd.", bidPrice: "₹36,500/Ton", totalAmount: "₹16,42,500", time: "15 mins ago", verified: true, isTop: false },
+    { bidder: "National Scrap Corp", bidPrice: "₹35,800/Ton", totalAmount: "₹16,11,000", time: "24 mins ago", verified: false, isTop: false },
+    { bidder: "Apex Recyclers LLP", bidPrice: "₹35,000/Ton", totalAmount: "₹15,75,000", time: "40 mins ago", verified: true, isTop: false },
   ];
 
   return (
@@ -44,10 +44,10 @@ const LiveBidsModal = ({ isOpen, onClose, lot, onAcceptBid }) => {
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
             <div className="text-xs text-slate-400 font-semibold mb-1">Current Highest Bid</div>
             <div className="text-xl font-extrabold text-emerald-600 flex items-center gap-1.5">
-              <span>{lot.topBid || "₹37,800/MT"}</span>
+              <span>{lot.topBid || "₹37,800/Ton"}</span>
               <TrendingUp className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">Reserve: {lot.pricePerUnit || "₹35,000/MT"}</div>
+            <div className="text-[10px] text-slate-400 mt-1">Reserve: {lot.pricePerUnit || "₹35,000/Ton"}</div>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">

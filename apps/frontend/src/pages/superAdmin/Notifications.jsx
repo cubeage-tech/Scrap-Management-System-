@@ -1,94 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Gavel,
-  FileText,
-  ShieldCheck,
-  Truck,
-  CheckCheck,
-  Bell,
+  FileText, Trophy, CheckCircle2, Package,
+  Gavel, UserCheck, XCircle, CheckCheck, Bell,
 } from "lucide-react";
+import { useNotificationStore, getTypeMeta, formatRelativeTime } from "../../store/notificationStore";
+
+const ICON_MAP = { FileText, Trophy, CheckCircle2, Package, Gavel, UserCheck, XCircle, Bell };
+
+const TABS = ["All", "Unread", "Quotation", "Auction", "Sale", "Account"];
 
 const Notifications = () => {
   const [activeTab, setActiveTab] = useState("All");
-  const [isRead, setIsRead] = useState(false);
+  const { notifications, unreadCount, loading, error, fetchNotifications, markRead, markAllRead } =
+    useNotificationStore();
 
-  const notifications = [
-    {
-      id: 1,
-      type: "auction",
-      title: "You were outbid on AUC-2290",
-      description:
-        "Copper Scrap (Millberry) — current bid ₹7,61,500.",
-      time: "4 min ago",
-      unread: true,
-      category: "Auctions",
-      icon: Gavel,
-    },
-    {
-      id: 2,
-      type: "quotation",
-      title: "Quotation QTN-8841 received",
-      description:
-        "Verma Recycling offered ₹7,38,000 for 12.5 MT copper.",
-      time: "38 min ago",
-      unread: true,
-      category: "All",
-      icon: FileText,
-    },
-    {
-      id: 3,
-      type: "approval",
-      title: "KYC approval pending",
-      description:
-        "Gujarat Brass Industries submitted GST and PAN documents.",
-      time: "1 hr ago",
-      unread: true,
-      category: "Approvals",
-      icon: ShieldCheck,
-    },
-    {
-      id: 4,
-      type: "order",
-      title: "Order ORD-5519 dispatched",
-      description:
-        "52 MT Kraft Paper Waste left Nagpur Depot, ETA 30 Jul.",
-      time: "3 hr ago",
-      unread: false,
-      category: "All",
-      icon: Truck,
-    },
-    {
-      id: 5,
-      type: "settled",
-      title: "Auction AUC-2288 settled",
-      description:
-        "₹5,46,000 credited against E-Waste PCB Assorted.",
-      time: "Yesterday",
-      unread: false,
-      category: "Auctions",
-      icon: CheckCheck,
-    },
-  ];
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
-  const tabs = ["All", "Unread (3)", "Auctions", "Approvals"];
-
-  const getFilteredNotifications = () => {
-    if (activeTab === "All") return notifications;
-
-    if (activeTab === "Unread (3)") {
-      return notifications.filter((notification) => notification.unread);
-    }
-
-    return notifications.filter(
-      (notification) => notification.category === activeTab
-    );
-  };
-
-  const filteredNotifications = getFilteredNotifications();
-
-  const markAllAsRead = () => {
-    setIsRead(true);
-  };
+  const filteredNotifications = notifications.filter((n) => {
+    if (activeTab === "All") return true;
+    if (activeTab === "Unread") return !n.isRead;
+    return getTypeMeta(n.type).category === activeTab;
+  });
 
   return (
     <div className="min-h-full w-full bg-[#f8fafc] px-3 py-4 sm:px-5 lg:px-6 lg:py-5">
@@ -102,39 +36,43 @@ const Notifications = () => {
       {/* Header */}
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800 sm:text-2xl">
-            Notifications
-          </h1>
-
+          <h1 className="text-xl font-semibold text-slate-800 sm:text-2xl">Notifications</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Everything happening across your listings, auctions and orders.
+            {unreadCount} {unreadCount === 1 ? "unread notification" : "unread notifications"}
           </p>
         </div>
 
         <button
-          onClick={markAllAsRead}
-          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 sm:w-auto"
+          onClick={markAllRead}
+          disabled={unreadCount === 0}
+          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
+          <CheckCheck className="mr-1.5 inline h-3.5 w-3.5" />
           Mark all as read
         </button>
       </div>
 
       {/* Tabs */}
       <div className="mb-3 flex flex-wrap items-center gap-1">
-        {tabs.map((tab) => {
+        {TABS.map((tab) => {
           const isActive = activeTab === tab;
-
+          const isUnreadTab = tab === "Unread";
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`rounded-md px-3 py-2 text-sm transition ${
+              className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm transition ${
                 isActive
                   ? "bg-white font-medium text-slate-800 shadow-sm"
                   : "text-slate-500 hover:bg-white hover:text-slate-700"
               }`}
             >
               {tab}
+              {isUnreadTab && unreadCount > 0 && (
+                <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                  {unreadCount}
+                </span>
+              )}
             </button>
           );
         })}
@@ -146,69 +84,64 @@ const Notifications = () => {
           <h2 className="text-sm font-medium text-slate-800">Inbox</h2>
         </div>
 
-        <div>
-          {filteredNotifications.length > 0 ? (
-            filteredNotifications.map((notification) => {
-              const Icon = notification.icon;
-              const showUnreadDot = notification.unread && !isRead;
-
-              return (
-                <div
-                  key={notification.id}
-                  className="flex items-start gap-3 border-b border-slate-200 px-4 py-4 last:border-b-0 sm:items-center"
-                >
-                  {/* Icon */}
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                    <Icon className="h-4 w-4 text-slate-500" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-slate-800">
-                      {notification.title}
-                    </h3>
-
-                    <p className="mt-0.5 text-sm text-slate-500">
-                      {notification.description}
-                    </p>
-                  </div>
-
-                  {/* Time + unread dot */}
-                  <div className="ml-1 flex shrink-0 flex-col items-end gap-2 sm:ml-4 sm:flex-row sm:items-center">
-                    <span className="whitespace-nowrap text-xs text-slate-500">
-                      {notification.time}
-                    </span>
-
-                    {showUnreadDot && (
-                      <span className="h-2 w-2 rounded-full bg-blue-600" />
-                    )}
-                  </div>
+        {loading && notifications.length === 0 ? (
+          <div className="flex items-center justify-center px-4 py-12 text-sm text-slate-400">
+            Loading notifications…
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center px-4 py-12 text-sm text-red-500">
+            {error}
+          </div>
+        ) : filteredNotifications.length > 0 ? (
+          filteredNotifications.map((item) => {
+            const meta = getTypeMeta(item.type);
+            const Icon = ICON_MAP[meta.iconName] ?? Bell;
+            return (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 border-b border-slate-200 px-4 py-4 last:border-b-0 sm:items-center"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                  <Icon className="h-4 w-4 text-slate-500" />
                 </div>
-              );
-            })
-          ) : (
-            <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-              <Bell className="mb-3 h-8 w-8 text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">
-                No notifications found
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                There are no notifications in this category.
-              </p>
-            </div>
-          )}
-        </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">{item.title}</h3>
+                  <p className="mt-0.5 text-sm text-slate-500">{item.message}</p>
+                </div>
+
+                <div className="ml-1 flex shrink-0 flex-col items-end gap-2 sm:ml-4 sm:flex-row sm:items-center">
+                  <span className="whitespace-nowrap text-xs text-slate-500">
+                    {formatRelativeTime(item.createdAt)}
+                  </span>
+                  {!item.isRead && (
+                    <button
+                      onClick={() => markRead(item.id)}
+                      title="Mark as read"
+                      className="h-2 w-2 rounded-full bg-blue-600 hover:bg-blue-700"
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+            <Bell className="mb-3 h-8 w-8 text-slate-300" />
+            <p className="text-sm font-medium text-slate-600">No notifications found</p>
+            <p className="mt-1 text-xs text-slate-400">
+              There are no notifications in this category.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Bottom information box */}
+      {/* Footer note */}
       <div className="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
         <Bell className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-
         <p className="text-sm text-slate-500">
           Configure delivery channels (email, SMS, webhook) in{" "}
-          <span className="font-medium text-slate-600">
-            Settings → Notifications.
-          </span>
+          <span className="font-medium text-slate-600">Settings → Notifications.</span>
         </p>
       </div>
     </div>

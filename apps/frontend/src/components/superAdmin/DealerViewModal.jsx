@@ -1,4 +1,4 @@
-import { X, Building2, MapPin, User, Mail, Phone, Tag, ShieldCheck, IndianRupee, FileText, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, MapPin, User, Mail, Phone, Tag, ShieldCheck, FileText, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
 
 const getStatusBadge = (status) => {
   switch (status) {

@@ -52,11 +52,12 @@ const MOBILE_BREAKPOINT = "(max-width:768px)";
 const DEFAULT_PAGE_SIZE = 10;
 const EMPTY_ARRAY = [];
 
-const RowActionsMenu = ({ row, onView, onEdit, onDelete }) => {
+const RowActionsMenu = ({ row, onView, onEdit, onDelete, onSell, canSell }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
-  if (!onView && !onEdit && !onDelete) return null;
+  const sellVisible = onSell && (!canSell || canSell(row.original));
+  if (!onView && !onEdit && !onDelete && !sellVisible) return null;
 
   const close = () => setAnchorEl(null);
 
@@ -92,6 +93,17 @@ const RowActionsMenu = ({ row, onView, onEdit, onDelete }) => {
           </MenuItem>
         )}
 
+        {sellVisible && (
+          <MenuItem onClick={() => run(onSell)} sx={{ color: "warning.dark" }}>
+            <ListItemIcon>
+              <svg style={{ width: 18, height: 18, color: "inherit" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a2 2 0 012-2z" />
+              </svg>
+            </ListItemIcon>
+            <ListItemText>Sell / Create Listing</ListItemText>
+          </MenuItem>
+        )}
+
         {onDelete && (
           <MenuItem onClick={() => run(onDelete)} sx={{ color: "error.main" }}>
             <ListItemIcon>
@@ -117,6 +129,8 @@ const MaterialTable = ({
   onView,
   onEdit,
   onDelete,
+  onSell,
+  canSell,
 
   fetchData,
   deleteData,
@@ -142,6 +156,8 @@ const MaterialTable = ({
   const resolvedOnView = onView ?? config.onView;
   const resolvedOnEdit = onEdit ?? config.onEdit;
   const resolvedOnDelete = onDelete ?? config.onDelete;
+  const resolvedOnSell = onSell ?? config.onSell;
+  const resolvedCanSell = canSell ?? config.canSell;
   const resolvedMobileHiddenColumns =
     mobileHiddenColumns ?? config.mobileHiddenColumns ?? EMPTY_ARRAY;
   const resolvedGetRowId = getRowId ?? config.getRowId;
@@ -333,7 +349,7 @@ const MaterialTable = ({
     enableFullScreenToggle: true,
     enablePagination: true,
 
-    enableRowActions: Boolean(resolvedOnView || resolvedOnEdit || resolvedOnDelete),
+    enableRowActions: Boolean(resolvedOnView || resolvedOnEdit || resolvedOnDelete || resolvedOnSell),
     positionActionsColumn: "last",
     renderRowActions: ({ row }) => (
       <RowActionsMenu
@@ -341,6 +357,8 @@ const MaterialTable = ({
         onView={resolvedOnView}
         onEdit={resolvedOnEdit}
         onDelete={resolvedOnDelete ? handleDeleteRequest : undefined}
+        onSell={resolvedOnSell}
+        canSell={resolvedCanSell}
       />
     ),
 

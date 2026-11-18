@@ -6,6 +6,18 @@ const VALID_SELLING_MODES = [
   "TENDER",
 ];
 
+const notFoundError = () => {
+  const error = new Error("Listing not found");
+  error.statusCode = 404;
+  return error;
+};
+
+const forbiddenError = () => {
+  const error = new Error("You do not own the scrap behind this listing");
+  error.statusCode = 403;
+  return error;
+};
+
 // ─── Create Listing ──────────────────────────────────────────────────────────
 
 export const createListingService = async ({
@@ -46,6 +58,14 @@ export const createListingService = async ({
     throw new Error(
       "You cannot create a listing for scrap owned by another organisation"
     );
+  }
+
+  // 3a. Guard: cannot list sold-out or mid-transfer inventory
+  if (scrap.status === 'SOLD_OUT') {
+    throw new Error('Cannot create a listing for sold-out inventory');
+  }
+  if (scrap.ownershipStatus === 'TRANSFER_PENDING') {
+    throw new Error('Cannot create a listing for inventory with a pending ownership transfer');
   }
 
   // 4. Check selling mode
@@ -94,18 +114,35 @@ export const createListingService = async ({
       },
     });
 
-    // Update allocated/listed quantity
+    // If AUCTION selling mode, auto-create Auction record in SCHEDULED state
+    if (sellingMode === "AUCTION") {
+      const startsAt = new Date();
+      const endsAt = closesAt ? new Date(closesAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const startingPricePerKg = expectedPricePerKg || 1;
+
+      await tx.auction.create({
+        data: {
+          listingId: newListing.id,
+          startsAt,
+          endsAt,
+          startingPricePerKg,
+          minIncrement: 1,
+          status: "SCHEDULED"
+        }
+      });
+    }
+
+    // Update allocated/listed quantity and derive new status
+    const newAvailQty = Number(scrap.availableQuantityKg) - quantity;
+    const newListedQty = Number(scrap.listedQuantityKg) + quantity;
+    const newScrapStatus = newAvailQty <= 0 ? 'FULLY_LISTED' : 'PARTIALLY_LISTED';
+
     await tx.scrapRecord.update({
-      where: {
-        id: scrapRecordId,
-      },
+      where: { id: scrapRecordId },
       data: {
-        listedQuantityKg: {
-          increment: quantity,
-        },
-        availableQuantityKg: {
-          decrement: quantity,
-        },
+        listedQuantityKg: newListedQty,
+        availableQuantityKg: newAvailQty,
+        status: newScrapStatus,
       },
     });
 
@@ -122,6 +159,8 @@ export const getListingsService = async ({
   status,
   sellingMode,
   categoryId,
+  ownerId,
+  ownerBusinessType,
   page = 1,
   limit = 10,
 }) => {
@@ -137,10 +176,22 @@ export const getListingsService = async ({
     where.sellingMode = sellingMode;
   }
 
+  const scrapRecordWhere = {};
+
   if (categoryId) {
-    where.scrapRecord = {
-      categoryId,
-    };
+    scrapRecordWhere.categoryId = categoryId;
+  }
+
+  if (ownerId) {
+    scrapRecordWhere.ownerId = ownerId;
+  }
+
+  if (ownerBusinessType) {
+    scrapRecordWhere.owner = { businessType: ownerBusinessType };
+  }
+
+  if (Object.keys(scrapRecordWhere).length > 0) {
+    where.scrapRecord = scrapRecordWhere;
   }
 
   const [listings, total] = await prisma.$transaction([
@@ -156,8 +207,22 @@ export const getListingsService = async ({
           include: {
             category: true,
             images: true,
+            owner: {
+              select: {
+                id: true,
+                companyName: true,
+                businessType: true
+              }
+            }
           },
         },
+        auction: {
+          include: {
+            bids: {
+              orderBy: { placedAt: "desc" }
+            }
+          }
+        }
       },
     }),
 
@@ -206,16 +271,24 @@ export const getListingByIdService = async (listingId) => {
 
 export const updateListingService = async (
   listingId,
-  updateData
+  updateData,
+  organisationId
 ) => {
   const listing = await prisma.listing.findUnique({
     where: {
       id: listingId,
     },
+    include: {
+      scrapRecord: true,
+    },
   });
 
   if (!listing) {
-    throw new Error("Listing not found");
+    throw notFoundError();
+  }
+
+  if (listing.scrapRecord.ownerId !== organisationId) {
+    throw forbiddenError();
   }
 
   if (listing.status !== "DRAFT") {
@@ -322,15 +395,22 @@ export const updateListingService = async (
 
 // ─── Publish Listing ──────────────────────────────────────────────────────────
 
-export const publishListingService = async (listingId) => {
+export const publishListingService = async (listingId, organisationId) => {
   const listing = await prisma.listing.findUnique({
     where: {
       id: listingId,
     },
+    include: {
+      scrapRecord: true,
+    },
   });
 
   if (!listing) {
-    throw new Error("Listing not found");
+    throw notFoundError();
+  }
+
+  if (listing.scrapRecord.ownerId !== organisationId) {
+    throw forbiddenError();
   }
 
   if (listing.status !== "DRAFT") {
@@ -339,33 +419,75 @@ export const publishListingService = async (listingId) => {
     );
   }
 
-  const updatedListing =
-    await prisma.listing.update({
-      where: {
-        id: listingId,
-      },
-      data: {
-        status: "PUBLISHED",
-        publishedAt: new Date(),
-      },
+  return await prisma.$transaction(async (tx) => {
+    const updatedListing = await tx.listing.update({
+      where: { id: listingId },
+      data: { status: "PUBLISHED", publishedAt: new Date() },
     });
 
-  return updatedListing;
+    // Auto-start the auction so dealers can bid immediately on publish
+    if (listing.sellingMode === "AUCTION") {
+      const auction = await tx.auction.findUnique({ where: { listingId } });
+      if (auction && auction.status === "SCHEDULED") {
+        const now = new Date();
+        const endsAt = auction.endsAt <= now
+          ? new Date(now.getTime() + 24 * 60 * 60 * 1000)
+          : auction.endsAt;
+        await tx.auction.update({
+          where: { id: auction.id },
+          data: { status: "LIVE", endsAt },
+        });
+      }
+    }
+
+    return updatedListing;
+  });
+};
+
+
+// ─── Get Listing Bids ─────────────────────────────────────────────────────────
+
+export const getListingBidsService = async (listingId) => {
+  const auction = await prisma.auction.findUnique({
+    where: { listingId },
+    select: { id: true, status: true, endsAt: true, currentHighestBidId: true }
+  });
+
+  if (!auction) {
+    throw new Error('No auction found for this listing');
+  }
+
+  const bids = await prisma.bid.findMany({
+    where: { auctionId: auction.id },
+    include: {
+      bidder: { select: { id: true, companyName: true } }
+    },
+    orderBy: { placedAt: 'desc' }
+  });
+
+  return { auction, bids };
 };
 
 
 // ─── Cancel Listing ──────────────────────────────────────────────────────────
 
 
-export const cancelListingService = async (listingId) => {
+export const cancelListingService = async (listingId, organisationId) => {
   const listing = await prisma.listing.findUnique({
     where: {
       id: listingId,
     },
+    include: {
+      scrapRecord: true,
+    },
   });
 
   if (!listing) {
-    throw new Error("Listing not found");
+    throw notFoundError();
+  }
+
+  if (listing.scrapRecord.ownerId !== organisationId) {
+    throw forbiddenError();
   }
 
   if (
@@ -378,28 +500,36 @@ export const cancelListingService = async (listingId) => {
   }
 
   return prisma.$transaction(async (tx) => {
-    const updatedListing =
-      await tx.listing.update({
-        where: {
-          id: listingId,
-        },
-        data: {
-          status: "CANCELLED",
-          closedAt: new Date(),
-        },
-      });
+    const updatedListing = await tx.listing.update({
+      where: { id: listingId },
+      data: { status: 'CANCELLED', closedAt: new Date() },
+    });
+
+    // Re-fetch to get current quantities (safe inside transaction)
+    const currentScrap = await tx.scrapRecord.findUnique({
+      where: { id: listing.scrapRecordId },
+    });
+
+    const cancelQty = Number(listing.quantityKg);
+    const newListedQty = Math.max(0, Number(currentScrap.listedQuantityKg) - cancelQty);
+    const newAvailQty = Number(currentScrap.availableQuantityKg) + cancelQty;
+
+    // Derive status: if no listed qty and space available, go back to AVAILABLE
+    let restoredStatus;
+    if (newListedQty <= 0 && newAvailQty > 0) {
+      restoredStatus = 'AVAILABLE';
+    } else if (newAvailQty <= 0 && newListedQty > 0) {
+      restoredStatus = 'FULLY_LISTED';
+    } else {
+      restoredStatus = 'PARTIALLY_LISTED';
+    }
 
     await tx.scrapRecord.update({
-      where: {
-        id: listing.scrapRecordId,
-      },
+      where: { id: listing.scrapRecordId },
       data: {
-        listedQuantityKg: {
-          decrement: listing.quantityKg,
-        },
-        availableQuantityKg: {
-          increment: listing.quantityKg,
-        },
+        listedQuantityKg: newListedQty,
+        availableQuantityKg: newAvailQty,
+        status: restoredStatus,
       },
     });
 

@@ -9,7 +9,6 @@ import {
   Check,
   CheckCircle2,
   AlertCircle,
-  Trash2,
   Plus,
   RotateCcw,
 } from "lucide-react";
@@ -19,138 +18,28 @@ import { dealersRegistryTableConfig } from "../../configs/tables/dealersRegistry
 import OnboardDealerModal from "../../components/superAdmin/OnboardDealerModal";
 import DealerViewModal from "../../components/superAdmin/DealerViewModal";
 import DealerEditModal from "../../components/superAdmin/DealerEditModal";
+import { getDealers, updateDealerStatus } from "../../core/services/dealer.service";
+import Loader from "../../components/common/Loader";
 
-// --- Reference Initial Data (Matching Figma Design Exactly) ---
-const INITIAL_DEALERS = [
-  {
-    id: "DLR-2210",
-    code: "DLR-2210",
-    initials: "SH",
-    name: "Shaikh Metals & Alloys",
-    specialisation: "Ferrous & Non-Ferrous",
-    location: "Bhiwandi, MH",
-    purchaseValueRaw: 6480000,
-    purchaseValue: "₹64,80,000",
-    status: "Approved",
-    date: "28 Jul 2026",
-    contactPerson: "Ibrahim Shaikh",
-    email: "contact@shaikhmetals.com",
-    phone: "+91 98201 44552",
-    gstNumber: "27AABCS9820B1Z2",
-  },
-  {
-    id: "DLR-2209",
-    code: "DLR-2209",
-    initials: "ME",
-    name: "Metro Metals",
-    specialisation: "Non-Ferrous",
-    location: "Delhi, DL",
-    purchaseValueRaw: 4120000,
-    purchaseValue: "₹41,20,000",
-    status: "Approved",
-    date: "27 Jul 2026",
-    contactPerson: "Vikas Aggarwal",
-    email: "info@metrometals.in",
-    phone: "+91 98110 88231",
-    gstNumber: "07AAACM4120C1ZP",
-  },
-  {
-    id: "DLR-2208",
-    code: "DLR-2208",
-    initials: "CR",
-    name: "Green Loop Recyclers",
-    specialisation: "Polymer",
-    location: "Ahmedabad, GJ",
-    purchaseValueRaw: 2380000,
-    purchaseValue: "₹23,80,000",
-    status: "Pending",
-    date: "26 Jul 2026",
-    contactPerson: "Chirag Patel",
-    email: "support@greenloop.co",
-    phone: "+91 97250 33419",
-    gstNumber: "24AABCG2380D1ZX",
-  },
-  {
-    id: "DLR-2207",
-    code: "DLR-2207",
-    initials: "KA",
-    name: "Kalyan Scrap Traders",
-    specialisation: "Ferrous",
-    location: "Nashik, MH",
-    purchaseValueRaw: 1740000,
-    purchaseValue: "₹17,40,000",
-    status: "Approved",
-    date: "24 Jul 2026",
-    contactPerson: "Kalyan Sonawane",
-    email: "kalyanscrap@rediffmail.com",
-    phone: "+91 94222 77810",
-    gstNumber: "27AAECK1740E1ZQ",
-  },
-  {
-    id: "DLR-2206",
-    code: "DLR-2206",
-    initials: "DE",
-    name: "Deccan Alloys",
-    specialisation: "E-Waste",
-    location: "Hyderabad, TS",
-    purchaseValueRaw: 980000,
-    purchaseValue: "₹9,80,000",
-    status: "Rejected",
-    date: "22 Jul 2026",
-    contactPerson: "Srinivas Rao",
-    email: "sales@deccanalloys.com",
-    phone: "+91 98490 55123",
-    gstNumber: "36AABCD9800F1ZS",
-  },
-  {
-    id: "DLR-2205",
-    code: "DLR-2205",
-    initials: "BA",
-    name: "Bharat Eco Alloys",
-    specialisation: "Ferrous & Non-Ferrous",
-    location: "Pune, MH",
-    purchaseValueRaw: 5240000,
-    purchaseValue: "₹52,40,000",
-    status: "Approved",
-    date: "20 Jul 2026",
-    contactPerson: "Amol Deshmukh",
-    email: "amol@bharateco.com",
-    phone: "+91 98220 99401",
-    gstNumber: "27AABCB5240G1ZT",
-  },
-  {
-    id: "DLR-2204",
-    code: "DLR-2204",
-    initials: "AP",
-    name: "Apex Polymer Works",
-    specialisation: "Polymer",
-    location: "Surat, GJ",
-    purchaseValueRaw: 3160000,
-    purchaseValue: "₹31,60,000",
-    status: "Approved",
-    date: "18 Jul 2026",
-    contactPerson: "Pravin Shah",
-    email: "contact@apexpolymer.in",
-    phone: "+91 98980 11245",
-    gstNumber: "24AACCA3160H1ZU",
-  },
-  {
-    id: "DLR-2203",
-    code: "DLR-2203",
-    initials: "HE",
-    name: "Horizon E-Waste Solutions",
-    specialisation: "E-Waste",
-    location: "Bengaluru, KA",
-    purchaseValueRaw: 1420000,
-    purchaseValue: "₹14,20,000",
-    status: "Pending",
-    date: "15 Jul 2026",
-    contactPerson: "Ananya Hegde",
-    email: "hello@horizone-waste.com",
-    phone: "+91 99800 66782",
-    gstNumber: "29AABCH1420I1ZV",
-  },
-];
+const STATUS_TO_BACKEND = {
+  Approved: "ACTIVE",
+  Pending: "PENDING",
+  Rejected: "REJECTED",
+};
+
+const BACKEND_TO_STATUS = {
+  ACTIVE: "Approved",
+  PENDING: "Pending",
+  REJECTED: "Rejected",
+  SUSPENDED: "Rejected",
+};
+
+const getInitials = (name) => {
+  const words = name.trim().split(" ");
+  return words.length > 1
+    ? (words[0][0] + words[1][0]).toUpperCase()
+    : words[0].slice(0, 2).toUpperCase();
+};
 
 // --- Custom Sleek Dropdown Component ---
 const CustomDropdown = ({
@@ -268,7 +157,9 @@ const LOCATION_FILTER_OPTIONS = [
 
 const Dealers = () => {
   // --- Data State ---
-  const [dealers, setDealers] = useState(INITIAL_DEALERS);
+  const [dealers, setDealers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
 
   // --- Filter & Search State ---
@@ -291,7 +182,58 @@ const Dealers = () => {
     setTimeout(() => setToastMessage(""), 3500);
   };
 
+  const fetchDealers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const statusParam =
+        statusFilter !== "All statuses" ? STATUS_TO_BACKEND[statusFilter] : undefined;
+
+      const response = await getDealers({
+        status: statusParam,
+        search: searchQuery || undefined,
+        page: 1,
+        limit: 100,
+      });
+
+      if (response.data?.success) {
+        const mapped = response.data.data.map((org) => ({
+          id: org.id,
+          code: org.code,
+          initials: getInitials(org.name),
+          name: org.name,
+          specialisation: org.specialisation,
+          location: org.location,
+          purchaseValueRaw: org.purchaseValue,
+          purchaseValue: org.purchaseValueDisplay,
+          status: BACKEND_TO_STATUS[org.status] || org.status,
+          date: org.date,
+          contactPerson: org.contactPerson,
+          email: org.contactEmail,
+          phone: org.contactPhone,
+          gstNumber: org.gstNumber,
+        }));
+
+        setDealers(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dealers:", err);
+      setError(err.response?.data?.message || "Failed to fetch dealers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch dealers from the real admin endpoint
+  useEffect(() => {
+    Promise.resolve().then(fetchDealers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, searchQuery]);
+
   // --- Filtering Logic ---
+  // Status is already applied server-side; this narrows further on
+  // specialisation/location/search without another round trip.
   const filteredDealers = useMemo(() => {
     return dealers.filter((item) => {
       const q = searchQuery.toLowerCase().trim();
@@ -303,9 +245,6 @@ const Dealers = () => {
         item.location.toLowerCase().includes(q) ||
         (item.contactPerson && item.contactPerson.toLowerCase().includes(q));
 
-      const matchesStatus =
-        statusFilter === "All statuses" || item.status.toLowerCase() === statusFilter.toLowerCase();
-
       const matchesSpec =
         specialisationFilter === "All specialisations" ||
         item.specialisation.toLowerCase().includes(specialisationFilter.toLowerCase());
@@ -313,9 +252,9 @@ const Dealers = () => {
       const matchesLocation =
         stateFilter === "All locations" || item.location.toLowerCase().includes(stateFilter.toLowerCase());
 
-      return matchesSearch && matchesStatus && matchesSpec && matchesLocation;
+      return matchesSearch && matchesSpec && matchesLocation;
     });
-  }, [dealers, searchQuery, statusFilter, specialisationFilter, stateFilter]);
+  }, [dealers, searchQuery, specialisationFilter, stateFilter]);
 
   // Row selection state, adapted between MaterialTable's { [id]: true } shape
   // (used by Material React Table's built-in checkbox column) and the plain
@@ -332,44 +271,55 @@ const Dealers = () => {
   };
 
   // --- CRUD Actions ---
+  // No backend endpoint exists yet to onboard a dealer from the admin side,
+  // so this stays local-only (same precedent as Buyers' invite modal).
   const handleAddDealer = (newDealer) => {
     setDealers((prev) => [newDealer, ...prev]);
     showToast(`Successfully onboarded ${newDealer.name} (${newDealer.code})!`);
   };
 
-  const handleUpdateDealer = (updated) => {
+  // No backend endpoint exists yet to update arbitrary dealer fields, so
+  // those stay local-only. Status IS backed by a real endpoint though, so a
+  // status change made from this form is persisted for real instead of
+  // silently being lost on refresh.
+  const handleUpdateDealer = async (updated) => {
+    const original = dealers.find((d) => d.id === updated.id);
+    if (original && updated.status !== original.status) {
+      try {
+        await updateDealerStatus(updated.id, { accountState: STATUS_TO_BACKEND[updated.status] });
+      } catch (err) {
+        console.error("Failed to update dealer status:", err);
+        showToast(err.response?.data?.message || "Failed to update dealer status.");
+        return;
+      }
+    }
+
     setDealers((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
     showToast(`Updated details for ${updated.name}`);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setDealers((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d))
-    );
-    showToast(`Status updated to ${newStatus}`);
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await updateDealerStatus(id, { accountState: STATUS_TO_BACKEND[newStatus] });
+      showToast(`Status updated to ${newStatus}`);
+      fetchDealers();
+    } catch (err) {
+      console.error("Failed to update dealer status:", err);
+      showToast(err.response?.data?.message || "Failed to update dealer status.");
+    }
   };
 
-  // MaterialTable shows its own confirmation dialog before calling this, so
-  // no window.confirm is needed here.
-  const handleDeleteDealer = (dealer) => {
-    setDealers((prev) => prev.filter((d) => d.id !== dealer.id));
-    setSelectedIds((prev) => prev.filter((item) => item !== dealer.id));
-    showToast(`Removed dealer from registry.`);
-  };
-
-  const handleBulkStatus = (status) => {
-    setDealers((prev) =>
-      prev.map((d) => (selectedIds.includes(d.id) ? { ...d, status } : d))
-    );
-    showToast(`Updated ${selectedIds.length} dealer(s) to ${status}`);
-    setSelectedIds([]);
-  };
-
-  const handleBulkDelete = () => {
-    if (window.confirm(`Delete ${selectedIds.length} selected dealer(s)?`)) {
-      setDealers((prev) => prev.filter((d) => !selectedIds.includes(d.id)));
-      showToast(`Deleted ${selectedIds.length} dealer(s).`);
+  const handleBulkStatus = async (status) => {
+    try {
+      await Promise.all(
+        selectedIds.map((id) => updateDealerStatus(id, { accountState: STATUS_TO_BACKEND[status] }))
+      );
+      showToast(`Updated ${selectedIds.length} dealer(s) to ${status}`);
       setSelectedIds([]);
+      fetchDealers();
+    } catch (err) {
+      console.error("Failed to update dealer status:", err);
+      showToast(err.response?.data?.message || "Failed to update selected dealers.");
     }
   };
 
@@ -381,7 +331,7 @@ const Dealers = () => {
         : filteredDealers;
 
     if (exportData.length === 0) {
-      alert("No dealers to export.");
+      showToast("No dealers to export.");
       return;
     }
 
@@ -595,14 +545,6 @@ const Dealers = () => {
 
             <button
               type="button"
-              onClick={handleBulkDelete}
-              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Delete
-            </button>
-
-            <button
-              type="button"
               onClick={() => setSelectedIds([])}
               className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2 cursor-pointer"
             >
@@ -651,17 +593,33 @@ const Dealers = () => {
       </div>
 
       {/* ================= 6. DEALERS TABLE ================= */}
-      <MaterialTable
-        config={dealersRegistryTableConfig}
-        data={filteredDealers}
-        getRowId={(row) => row.id}
-        onView={(dealer) => setViewingDealer(dealer)}
-        onEdit={(dealer) => setEditingDealer(dealer)}
-        onDelete={handleDeleteDealer}
-        enableRowSelection
-        rowSelection={rowSelection}
-        onRowSelectionChange={handleRowSelectionChange}
-      />
+      {loading ? (
+        <div className="flex items-center justify-center py-12 bg-white rounded-xl border border-slate-200">
+          <Loader />
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
+          <p className="font-semibold">Error loading dealers</p>
+          <p className="text-sm mt-1">{error}</p>
+          <button
+            onClick={fetchDealers}
+            className="mt-3 px-4 py-2 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : (
+        <MaterialTable
+          config={dealersRegistryTableConfig}
+          data={filteredDealers}
+          getRowId={(row) => row.id}
+          onView={(dealer) => setViewingDealer(dealer)}
+          onEdit={(dealer) => setEditingDealer(dealer)}
+          enableRowSelection
+          rowSelection={rowSelection}
+          onRowSelectionChange={handleRowSelectionChange}
+        />
+      )}
 
       {/* ================= 7. MODALS ================= */}
       {isOnboardModalOpen && (

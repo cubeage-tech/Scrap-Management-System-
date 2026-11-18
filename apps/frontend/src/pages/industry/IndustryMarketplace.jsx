@@ -1,242 +1,19 @@
-import React, { useState, useMemo } from 'react';
-
-// --- Helper SVG Icons ---
-const SearchIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
-);
-
-const FilterIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-  </svg>
-);
-
-const RotateCcwIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-  </svg>
-);
-
-const CubeIcon = ({ className = "w-8 h-8" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-  </svg>
-);
-
-const ClockIcon = ({ className = "w-3.5 h-3.5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const EyeIcon = ({ className = "w-3.5 h-3.5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-  </svg>
-);
-
-const GavelIcon = ({ className = "w-3.5 h-3.5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 9.75L16.5 12l-7.5 7.5H4.5v-4.5l7.5-7.5zm0 0L17.25 7a1.5 1.5 0 012.122 0l1.128 1.128a1.5 1.5 0 010 2.122l-2.75 2.75" />
-  </svg>
-);
-
-const ChevronDownIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
-const XIcon = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
-const CompareIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-  </svg>
-);
-
-const BookmarkIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-  </svg>
-);
-
-const CheckCircleIcon = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-// --- Mock Data ---
-const INITIAL_SCRAP_ITEMS = [
-  {
-    id: 1,
-    title: 'Copper Scrap (Millberry)',
-    code: 'SCR-10426',
-    category: 'Non-Ferrous',
-    status: 'Published',
-    statusType: 'blue',
-    quantity: '12.5 MT',
-    condition: 'Clean',
-    seller: 'Tata Precision Forgings',
-    location: 'Pune - Unit 2',
-    askingPrice: 742000,
-    listedDate: '2026-07-28',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 2,
-    title: 'Steel Turnings',
-    code: 'SCR-10427',
-    category: 'Ferrous',
-    status: 'Live Auction',
-    statusType: 'red',
-    quantity: '48 MT',
-    condition: 'Oily',
-    seller: 'Bharat Steel Works',
-    location: 'Jamshedpur - Yard A',
-    askingPrice: 1284000,
-    listedDate: '2026-07-27',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 3,
-    title: 'Aluminium Extrusion 6063',
-    code: 'SCR-10428',
-    category: 'Non-Ferrous',
-    status: 'Available',
-    statusType: 'sky',
-    quantity: '21.2 MT',
-    condition: 'Clean',
-    seller: 'Ashok Auto Components',
-    location: 'Chennai - Plant 1',
-    askingPrice: 396000,
-    listedDate: '2026-07-27',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 4,
-    title: 'Brass Honey Scrap',
-    code: 'SCR-10425',
-    category: 'Non-Ferrous',
-    status: 'Pending',
-    statusType: 'amber',
-    quantity: '6.8 MT',
-    condition: 'Mixed',
-    seller: 'Gujarat Brass Industries',
-    location: 'Rajkot - Store 3',
-    askingPrice: 312000,
-    listedDate: '2026-07-26',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 5,
-    title: 'HDPE Plastic Regrind',
-    code: 'SCR-10424',
-    category: 'Polymer',
-    status: 'Approved',
-    statusType: 'emerald',
-    quantity: '33 MT',
-    condition: 'Baled',
-    seller: 'Surat Polymers Ltd.',
-    location: 'Surat - Warehouse B',
-    askingPrice: 148500,
-    listedDate: '2026-07-25',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 6,
-    title: 'E-Waste PCB Assorted',
-    code: 'SCR-10423',
-    category: 'E-Waste',
-    status: 'Sold',
-    statusType: 'emerald-dark',
-    quantity: '4.4 MT',
-    condition: 'Sorted',
-    seller: 'Nexa Electronics',
-    location: 'Bengaluru - Hub',
-    askingPrice: 528000,
-    listedDate: '2026-07-24',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 7,
-    title: 'CNC Machine Parts',
-    code: 'SCR-10422',
-    category: 'Machinery',
-    status: 'Draft',
-    statusType: 'zinc',
-    quantity: '18 Units',
-    condition: 'Used',
-    seller: 'Tata Precision Forgings',
-    location: 'Pune - Unit 2',
-    askingPrice: 260000,
-    listedDate: '2026-07-23',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 8,
-    title: 'Cotton Textile Waste',
-    code: 'SCR-10421',
-    category: 'Textile',
-    status: 'Published',
-    statusType: 'blue',
-    quantity: '26.7 MT',
-    condition: 'Baled',
-    seller: 'Tiruppur Knitwear',
-    location: 'Tiruppur - Shed 4',
-    askingPrice: 94000,
-    listedDate: '2026-07-22',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 9,
-    title: 'Kraft Paper Waste',
-    code: 'SCR-10420',
-    category: 'Paper',
-    status: 'Auction Ended',
-    statusType: 'gray',
-    quantity: '52 MT',
-    condition: 'Dry',
-    seller: 'Central Packaging',
-    location: 'Nagpur - Depot',
-    askingPrice: 78000,
-    listedDate: '2026-07-21',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-  {
-    id: 10,
-    title: 'Rubber Tyre Scrap',
-    code: 'SCR-10419',
-    category: 'Rubber',
-    status: 'Completed',
-    statusType: 'emerald',
-    quantity: '40 MT',
-    condition: 'Shredded',
-    seller: 'Punjab Tyres',
-    location: 'Ludhiana - Yard',
-    askingPrice: 112000,
-    listedDate: '2026-07-20',
-    watchingCount: 6,
-    auctionReady: true,
-  },
-];
+import { useState, useEffect, useMemo, memo } from 'react';
+import {
+  Filter,
+  RotateCcw,
+  Box,
+  Clock,
+  Eye,
+  Gavel,
+  ChevronDown,
+  X,
+  SlidersHorizontal,
+  Bookmark,
+  CheckCircle2,
+} from 'lucide-react';
+import ApiService from '../../core/services/api.service';
+import { useAuthStore } from '../../store/authStore';
 
 const CATEGORIES = [
   'Ferrous',
@@ -285,12 +62,13 @@ const StatusBadge = ({ status, statusType }) => {
 };
 
 // --- Reusable Scrap Card ---
-const ScrapCard = React.memo(({ item, onQuotationClick, onToggleCompare, isCompared }) => (
+const ScrapCard = memo(({ item, onQuotationClick, onToggleCompare, isCompared }) => (
   <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden group">
     <div className="h-44 bg-slate-50/80 border-b border-slate-100 flex items-center justify-center relative">
       <div className="p-4 bg-white rounded-2xl shadow-2xs border border-slate-100/90 text-slate-400 group-hover:scale-105 transition-transform duration-200">
-        <CubeIcon className="w-9 h-9 stroke-[1.25]" />
+        <Box className="w-9 h-9 stroke-[1.25]" />
       </div>
+
 
       <label className="absolute top-3 left-3 bg-white px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer font-medium hover:bg-slate-50 transition-colors">
         <input
@@ -354,18 +132,19 @@ const ScrapCard = React.memo(({ item, onQuotationClick, onToggleCompare, isCompa
 
         <div className="flex flex-wrap items-center justify-between gap-y-1 text-[11px] text-slate-400 pt-2.5 mt-2 border-t border-slate-100/70">
           <span className="flex items-center gap-1">
-            <ClockIcon className="w-3 h-3 text-slate-400" />
+            <Clock className="w-3 h-3 text-slate-400" />
             Listed {item.listedDate}
           </span>
           <span className="flex items-center gap-1">
-            <EyeIcon className="w-3 h-3 text-slate-400" />
+            <Eye className="w-3 h-3 text-slate-400" />
             {item.watchingCount} watching
           </span>
           <span className="flex items-center gap-1 text-slate-500 font-medium">
-            <GavelIcon className="w-3 h-3 text-slate-400" />
+            <Gavel className="w-3 h-3 text-slate-400" />
             {item.auctionReady ? 'Auction ready' : 'Standard'}
           </span>
         </div>
+
       </div>
     </div>
   </div>
@@ -373,25 +152,44 @@ const ScrapCard = React.memo(({ item, onQuotationClick, onToggleCompare, isCompa
 
 // --- Modal for Submitting Quotation ---
 const SubmitQuotationModal = ({ item, onClose, onSubmitSuccess }) => {
-  const [offerPrice, setOfferPrice] = useState(item ? item.askingPrice : '');
-  const [quantityRequired, setQuantityRequired] = useState(item ? item.quantity : '');
+  const defaultPricePerKg = item?.rawListing?.expectedPricePerKg ?? '';
+  const defaultQtyKg      = item?.rawListing?.quantityKg ?? '';
+
+  const [pricePerKg, setPricePerKg]     = useState(defaultPricePerKg);
+  const [quantityKg, setQuantityKg]     = useState(defaultQtyKg);
   const [noteToSeller, setNoteToSeller] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError]   = useState('');
 
   if (!item) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setSubmitError('');
+    const priceNum = Number(pricePerKg);
+    const qtyNum   = Number(quantityKg);
+    if (!priceNum || priceNum <= 0) { setSubmitError('Enter a valid price per kg.'); return; }
+    if (!qtyNum   || qtyNum   <= 0) { setSubmitError('Enter a valid quantity in kg.'); return; }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      onSubmitSuccess(`Quotation of ${formatCurrency(offerPrice)} submitted for ${item.title}!`);
+    setIsSubmitting(true);
+    try {
+      await ApiService.createQuotation({
+        listingId:  item.id,
+        pricePerKg: priceNum,
+        quantityKg: qtyNum,
+        note:       noteToSeller || undefined,
+      });
+      onSubmitSuccess(`Quotation submitted for ${item.title}!`);
       onClose();
-    }, 400);
+    } catch (err) {
+      setSubmitError(err?.response?.data?.message || 'Failed to submit quotation. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const sellerShortName = item.seller || 'Seller';
+  const totalPreview = pricePerKg && quantityKg ? formatCurrency(Number(pricePerKg) * Number(quantityKg)) : '—';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
@@ -404,40 +202,46 @@ const SubmitQuotationModal = ({ item, onClose, onSubmitSuccess }) => {
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           aria-label="Close modal"
         >
-          <XIcon className="w-4 h-4" />
+          <X className="w-4 h-4" />
         </button>
 
         <div>
           <h2 className="text-lg font-bold text-slate-900">Submit quotation</h2>
           <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-            {item.title} - {item.quantity} - {sellerShortName}
+            {item.title} · {item.quantity} · {sellerShortName}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Your offer (₹)</label>
+            <label className="block text-xs font-semibold text-slate-700">Your price per kg (₹/kg)</label>
             <input
               type="number"
-              value={offerPrice}
-              onChange={(e) => setOfferPrice(e.target.value)}
+              value={pricePerKg}
+              onChange={(e) => setPricePerKg(e.target.value)}
               required
               min="1"
+              step="0.01"
               className="w-full mt-1.5 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              placeholder="742000"
+              placeholder="35.00"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Quantity required</label>
+            <label className="block text-xs font-semibold text-slate-700">Quantity (kg)</label>
             <input
-              type="text"
-              value={quantityRequired}
-              onChange={(e) => setQuantityRequired(e.target.value)}
+              type="number"
+              value={quantityKg}
+              onChange={(e) => setQuantityKg(e.target.value)}
               required
+              min="1"
+              step="0.01"
               className="w-full mt-1.5 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              placeholder="12.5 MT"
+              placeholder="5000"
             />
+            {pricePerKg && quantityKg && (
+              <p className="text-[11px] text-slate-500 mt-1">Total: <strong className="text-slate-800">{totalPreview}</strong></p>
+            )}
           </div>
 
           <div>
@@ -450,6 +254,10 @@ const SubmitQuotationModal = ({ item, onClose, onSubmitSuccess }) => {
               placeholder="Payment terms, lifting schedule, transport arrangement..."
             />
           </div>
+
+          {submitError && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
+          )}
 
           <div className="flex items-center justify-end gap-2.5 pt-3 mt-4 border-t border-slate-100">
             <button
@@ -492,7 +300,7 @@ const CompareModal = ({ comparedItems, onClose, onRemoveCompare }) => {
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
           >
-            <XIcon className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -513,7 +321,7 @@ const CompareModal = ({ comparedItems, onClose, onRemoveCompare }) => {
                         onClick={() => onRemoveCompare(item.id)}
                         className="text-slate-400 hover:text-rose-500"
                       >
-                        <XIcon className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </th>
@@ -585,16 +393,61 @@ const CompareModal = ({ comparedItems, onClose, onRemoveCompare }) => {
 
 // --- Main Industry Marketplace Page Component ---
 const IndustryMarketplace = () => {
-  const [items] = useState(INITIAL_SCRAP_ITEMS);
+  const { user } = useAuthStore();
+  const [items, setItems] = useState([]);
+  const [_isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [priceRange, setPriceRange] = useState(1500000);
   const [selectedLocation, setSelectedLocation] = useState('All India');
-  const [comparedIds, setComparedIds] = useState([1, 2]);
+  const [comparedIds, setComparedIds] = useState([]);
   const [selectedQuotationItem, setSelectedQuotationItem] = useState(null);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+
+  const loadListings = async () => {
+    setIsLoading(true);
+    try {
+      const res = await ApiService.getListings({ status: "PUBLISHED", ownerBusinessType: "INDUSTRY" });
+      if (res?.data?.success && res.data.data) {
+        const currentOrgId = user?.organisationId;
+        const mapped = res.data.data
+          .filter((listing) => listing.scrapRecord?.owner?.id !== currentOrgId)
+          .map((listing) => {
+          const scrap = listing.scrapRecord || {};
+          const cat = scrap.category?.name || "General";
+          const qtyMT = Number(listing.quantityKg || 0) / 1000;
+          const price = Number(listing.expectedPricePerKg || 0) * Number(listing.quantityKg || 0);
+
+          return {
+            id: listing.id,
+            title: cat !== "General" ? `${cat} Scrap` : (scrap.description || "Industrial Scrap"),
+            code: `SCR-${listing.id.slice(0, 6).toUpperCase()}`,
+            category: cat,
+            status: listing.status === "PUBLISHED" ? "Published" : listing.status,
+            statusType: listing.sellingMode === "AUCTION" ? "red" : "blue",
+            quantity: `${qtyMT.toFixed(1)} Tons`,
+            condition: scrap.condition || "Clean",
+            seller: scrap.owner?.companyName || "Industrial Scrap Co.",
+            location: scrap.locationLabel || "Industrial Zone",
+            askingPrice: price || 500000,
+            listedDate: new Date(listing.createdAt).toISOString().slice(0, 10),
+            watchingCount: 4,
+            auctionReady: listing.sellingMode === "AUCTION",
+            rawListing: listing,
+          };
+        });
+        setItems(mapped);
+      }
+    } catch (err) {
+      console.error("Error loading marketplace listings:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadListings(); }, [user?.organisationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleCompare = (id) => {
     setComparedIds((prev) =>
@@ -659,14 +512,14 @@ const IndustryMarketplace = () => {
     <div className="min-h-screen bg-slate-50/60 text-slate-800 font-sans p-3 sm:p-5 lg:p-7 relative">
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 border border-slate-800 max-w-md w-[92%] sm:w-auto animate-in fade-in slide-in-from-top-4 duration-200">
-          <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-medium text-slate-100">{toastMessage}</span>
 
           <button
             onClick={() => setToastMessage(null)}
             className="ml-auto pl-2 text-slate-400 hover:text-white"
           >
-            <XIcon className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -686,7 +539,7 @@ const IndustryMarketplace = () => {
           </h2>
 
           <p className="text-xs text-slate-500 mt-0.5">
-            1,842 MT of verified scrap from 486 industries, updated in real time.
+            Verified scrap from industries, updated in real time.
           </p>
         </div>
 
@@ -695,7 +548,7 @@ const IndustryMarketplace = () => {
             onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
             className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg shadow-2xs"
           >
-            <FilterIcon className="w-3.5 h-3.5 text-slate-500" />
+            <Filter className="w-3.5 h-3.5 text-slate-500" />
             <span>Filters</span>
           </button>
 
@@ -703,7 +556,7 @@ const IndustryMarketplace = () => {
             onClick={() => setIsCompareModalOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
           >
-            <CompareIcon className="w-3.5 h-3.5 text-slate-500" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
             <span>Compare ({comparedIds.length})</span>
           </button>
 
@@ -711,7 +564,7 @@ const IndustryMarketplace = () => {
             onClick={() => showToast("Loaded saved search preset: 'Non-Ferrous & Ferrous Scrap'")}
             className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-2xs transition-colors cursor-pointer"
           >
-            <BookmarkIcon className="w-3.5 h-3.5 text-white/90" />
+            <Bookmark className="w-3.5 h-3.5 text-white/90" />
             <span>Saved searches</span>
           </button>
         </div>
@@ -725,7 +578,7 @@ const IndustryMarketplace = () => {
         >
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-              <FilterIcon className="w-4 h-4 text-slate-500" />
+              <Filter className="w-4 h-4 text-slate-500" />
               Advanced filters
             </h3>
 
@@ -734,7 +587,7 @@ const IndustryMarketplace = () => {
                 onClick={() => setIsMobileFilterOpen(false)}
                 className="lg:hidden text-slate-400 hover:text-slate-600"
               >
-                <XIcon className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -794,7 +647,7 @@ const IndustryMarketplace = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700">
-              Price per MT (₹)
+              Price per Ton (₹)
             </label>
 
             <input
@@ -830,7 +683,7 @@ const IndustryMarketplace = () => {
                 ))}
               </select>
 
-              <ChevronDownIcon className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
@@ -838,7 +691,7 @@ const IndustryMarketplace = () => {
             onClick={handleResetFilters}
             className="w-full py-2 bg-slate-100 hover:bg-slate-200/70 text-slate-700 text-xs font-medium rounded-xl border border-slate-200/80 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <RotateCcwIcon className="w-3.5 h-3.5 text-slate-500" />
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
             <span>Reset filters</span>
           </button>
         </aside>
@@ -846,7 +699,7 @@ const IndustryMarketplace = () => {
         <main className="flex-1 min-w-0">
           {filteredItems.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs">
-              <CubeIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <Box className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <h3 className="text-base font-semibold text-slate-900">
                 No matching scrap listings found
               </h3>
@@ -894,6 +747,7 @@ const IndustryMarketplace = () => {
       )}
     </div>
   );
+
 };
 
 export default IndustryMarketplace;

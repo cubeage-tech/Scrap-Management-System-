@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Package,
   FileText,
@@ -7,130 +7,100 @@ import {
   IndianRupee,
   Percent,
   Search,
-  Bell,
-  Settings,
   Plus,
-  Key
+  Key,
 } from "lucide-react";
 
-import AddScrapModal from "../../components/industry/AddScrapModal";
+import AddScrapModal from "../../components/common/AddScrapModal";
+
 import LiveBidsModal from "../../components/industry/LiveBidsModal";
 import MaterialTable from "../../components/common/MaterialTable";
 import { industryTableConfig } from "../../configs/tables/industryTable.config";
+import { recentTransactionsColumns } from "../../configs/tables/recentTransactionsTable.config";
+import ApiService from "../../core/services/api.service";
 
-const initialStockData = [
-  {
-    id: "SCRAP-2026-001",
-    title: "MS Steel HMS 1&2 Heavy Melting",
-    category: "Ferrous Metal",
-    grade: "Grade A",
-    weight: "45.0 MT",
-    pricePerUnit: "₹37,800/MT",
-    totalValue: "₹17,01,000",
-    mode: "Live Auction",
-    status: "Bidding Live",
-    biddersCount: 14,
-    topBid: "₹37,800/MT",
-    buyer: "Metro Recyclers Pvt Ltd",
-    dateAdded: "Aug 10, 2026",
-  },
-  {
-    id: "SCRAP-2026-002",
-    title: "Copper Cable & Armored Wire Scrap",
-    category: "Electrical & Cable",
-    grade: "Grade A",
-    weight: "8.5 MT",
-    pricePerUnit: "₹330,000/MT",
-    totalValue: "₹28,05,000",
-    mode: "Sealed Tender",
-    status: "Pending Quote",
-    biddersCount: 6,
-    topBid: "₹330,000/MT",
-    buyer: "Sanjay Metals Pvt. Ltd.",
-    dateAdded: "Aug 11, 2026",
-  },
-  {
-    id: "SCRAP-2026-003",
-    title: "Aluminium Die-Cast Scrap",
-    category: "Non-Ferrous Metal",
-    grade: "Grade B",
-    weight: "12.0 MT",
-    pricePerUnit: "₹172,000/MT",
-    totalValue: "₹20,64,000",
-    mode: "B2B Marketplace",
-    status: "Completed",
-    biddersCount: 9,
-    topBid: "₹172,000/MT",
-    buyer: "National Scrap Corp",
-    dateAdded: "Aug 08, 2026",
-  },
-  {
-    id: "SCRAP-2026-004",
-    title: "Mixed E-Waste Scrap",
-    category: "E-Scrap & Machinery",
-    grade: "Grade C",
-    weight: "2.8 MT",
-    pricePerUnit: "₹91,000/MT",
-    totalValue: "₹2,54,800",
-    mode: "Live Auction",
-    status: "Bidding Live",
-    biddersCount: 9,
-    topBid: "₹91,000/MT",
-    buyer: "GreenMetal Solutions",
-    dateAdded: "Aug 12, 2026",
-  },
-  {
-    id: "SCRAP-2026-005",
-    title: "LDPE Film Industrial Scrap",
-    category: "Plastic & Rubber",
-    grade: "Grade B",
-    weight: "8.0 MT",
-    pricePerUnit: "₹52,000/MT",
-    totalValue: "₹4,16,000",
-    mode: "B2B Marketplace",
-    status: "Cancelled",
-    biddersCount: 0,
-    topBid: "-",
-    buyer: "Ravi Kumar Agency",
-    dateAdded: "Aug 13, 2026",
-  },
-  {
-    id: "SCRAP-2026-006",
-    title: "Stainless Steel 304 Offcuts",
-    category: "Ferrous Metal",
-    grade: "Grade A",
-    weight: "6.5 MT",
-    pricePerUnit: "₹147,500/MT",
-    totalValue: "₹9,58,750",
-    mode: "Sealed Tender",
-    status: "Scheduled",
-    biddersCount: 0,
-    topBid: "₹1,47,500/MT",
-    buyer: "Pending Auction",
-    dateAdded: "Aug 14, 2026",
-  },
-];
+const initialTransactions = [];
+const initialAuctions = [];
 
-const initialTransactions = [
-  { id: "SAL-001", material: "MS Steel HMS 1&2", buyer: "Metro Recyclers Pvt Ltd", value: "₹17,01,000", status: "Completed" },
-  { id: "SAL-002", material: "Copper Cable Scrap", buyer: "Sanjay Metals Pvt. Ltd.", value: "₹28,05,000", status: "Pending" },
-  { id: "SAL-003", material: "Aluminium Die-Cast Scrap", buyer: "National Scrap Corp", value: "₹20,64,000", status: "Completed" },
-  { id: "SAL-004", material: "Mixed E-Waste", buyer: "GreenMetal Solutions", value: "₹2,54,800", status: "Pending" },
-  { id: "SAL-005", material: "LDPE Film Scrap", buyer: "Ravi Kumar Agency", value: "₹4,16,000", status: "Cancelled" },
-];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DONUT_COLORS = ["#2563eb", "#f97316", "#22c55e", "#a855f7", "#ef4444", "#64748b", "#0ea5e9", "#eab308"];
 
-const initialAuctions = [
-  { id: "AUC-001", title: "MS Steel HMS 1&2 - 45 MT", status: "Live", currentBid: "₹37,800", timer: "02:34:18", bids: "38 bids · 14 bidders" },
-  { id: "AUC-002", title: "Stainless Steel 304 - 6.5 MT", status: "Scheduled", currentBid: "₹1,47,500", timer: "05:00:00", bids: "0 bids · 0 bidders" },
-  { id: "AUC-003", title: "Mixed E-Waste - 2.8 MT", status: "Completed", currentBid: "₹91,000", timer: "00:00:00", bids: "22 bids · 9 bidders" },
-  { id: "AUC-004", title: "Copper Wire Scrap - 3.2 MT", status: "Scheduled", currentBid: "₹5,19,000", timer: "22:00:00", bids: "0 bids · 0 bidders" },
-];
+function buildChartMonths(salesHistory) {
+  const now = new Date();
+  const map = {};
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    map[key] = { month: MONTH_NAMES[d.getMonth()], rev: 0, vol: 0 };
+  }
+  salesHistory.forEach((s) => {
+    const d = new Date(s.completedAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (map[key]) {
+      map[key].rev += Number(s.totalValue || 0);
+      map[key].vol += Number(s.quantityKg || 0);
+    }
+  });
+  const months = Object.values(map);
+  const maxRev = Math.max(...months.map((m) => m.rev), 1);
+  const maxVol = Math.max(...months.map((m) => m.vol), 1);
+  return months.map((m) => ({
+    month: m.month,
+    revRaw: m.rev,
+    volRaw: m.vol,
+    rev: Math.round((m.rev / maxRev) * 95) || 0,
+    vol: Math.round((m.vol / maxVol) * 80) || 0,
+  }));
+}
+
+function buildMaterialMix(categoryPerformance) {
+  if (!categoryPerformance || categoryPerformance.length === 0) return [];
+  const total = categoryPerformance.reduce((s, c) => s + Number(c.soldKg || 0), 0) || 1;
+  return categoryPerformance
+    .sort((a, b) => b.soldKg - a.soldKg)
+    .slice(0, 6)
+    .map((c, i) => ({
+      name: c.category,
+      pct: Math.round((Number(c.soldKg) / total) * 100),
+      color: DONUT_COLORS[i % DONUT_COLORS.length],
+    }));
+}
+
+function buildRecentActivity(salesHistory) {
+  if (!salesHistory || salesHistory.length === 0) return [];
+  return [...salesHistory]
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+    .slice(0, 5)
+    .map((s) => {
+      const ago = (() => {
+        const diff = Date.now() - new Date(s.completedAt).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
+        return `${Math.floor(hrs / 24)} day${Math.floor(hrs / 24) > 1 ? "s" : ""} ago`;
+      })();
+      const val = Number(s.totalValue || 0).toLocaleString("en-IN");
+      return {
+        id: s.id,
+        title: "Sale Completed",
+        desc: `${s.buyerName} purchased ${Number(s.quantityKg).toLocaleString("en-IN")} kg at ₹${Number(s.pricePerKg).toLocaleString("en-IN")}/kg — total ₹${val}`,
+        ago,
+        color: "bg-emerald-500",
+      };
+    });
+}
 
 const IndustryDashboard = () => {
   // State management for inventory, transactions, and auctions
-  const [stockList, setStockList] = useState(initialStockData);
+  const [stockList, setStockList] = useState([]);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [auctions, setAuctions] = useState(initialAuctions);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [_isLoading, setIsLoading] = useState(true);
+  const [chartMonths, setChartMonths] = useState([]);
+  const [materialMix, setMaterialMix] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   // Filters & Search State
   const [selectedTab, setSelectedTab] = useState("All");
@@ -140,8 +110,41 @@ const IndustryDashboard = () => {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("B2B Marketplace"); // 'B2B Marketplace', 'Live Auction', 'Sealed Tender'
+  const [modalMode, setModalMode] = useState("B2B Marketplace");
   const [selectedAuctionLot, setSelectedAuctionLot] = useState(null);
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const [dashRes, reportsRes] = await Promise.allSettled([
+        ApiService.getIndustryDashboard(),
+        ApiService.getIndustryReports(),
+      ]);
+
+      if (dashRes.status === "fulfilled" && dashRes.value?.data?.success) {
+        const data = dashRes.value.data.data;
+        setDashboardData(data);
+        if (data.stockList && data.stockList.length > 0) setStockList(data.stockList);
+        if (data.transactions) setTransactions(data.transactions);
+        if (data.auctionsWidget) setAuctions(data.auctionsWidget);
+      }
+
+      if (reportsRes.status === "fulfilled" && reportsRes.value?.data?.success) {
+        const rdata = reportsRes.value.data.data;
+        const history = rdata.salesHistory || [];
+        setChartMonths(buildChartMonths(history));
+        setMaterialMix(buildMaterialMix(rdata.categoryPerformance || []));
+        setRecentActivity(buildRecentActivity(history));
+      }
+    } catch (err) {
+      console.error("Error fetching industry dashboard data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchDashboardData(); }, []);
 
   // Helper Toast notification
   const showToast = (msg) => {
@@ -266,137 +269,159 @@ const IndustryDashboard = () => {
         
         {/* Stat Card 1 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Package className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              +12%
+              Live DB
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{totalWeight} MT</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.totalWeightMT ?? totalWeight} Tons
+            </div>
             <div className="text-xs font-semibold text-slate-400">Total Scrap Inventory</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">₹38.2L value</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+              {dashboardData?.stats?.totalScrapValue || "₹0 value"}
+            </div>
           </div>
         </div>
 
         {/* Stat Card 2 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <FileText className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              +33%
+              Listings
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{totalListings}</div>
-            <div className="text-xs font-semibold text-slate-400">Today's Listings</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">2 new today</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.totalListings ?? totalListings}
+            </div>
+            <div className="text-xs font-semibold text-slate-400">Marketplace Listings</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+              {dashboardData?.stats?.todayListingsCount ?? 0} new today
+            </div>
           </div>
         </div>
 
         {/* Stat Card 3 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Key className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[11px] font-bold">
-              -1
+              Active
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{liveAuctionsCount || 2}</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.liveAuctionsCount ?? liveAuctionsCount}
+            </div>
             <div className="text-xs font-semibold text-slate-400">Active Auctions</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">1 live now</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Real-time bidding</div>
           </div>
         </div>
 
         {/* Stat Card 4 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <FileText className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              stable
+              Tenders
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">{openTendersCount || 3}</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.openTendersCount ?? openTendersCount}
+            </div>
             <div className="text-xs font-semibold text-slate-400">Open Tenders</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">7 offers received</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Sealed bids open</div>
           </div>
         </div>
 
         {/* Stat Card 5 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
               <MessageSquare className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              +2
+              Quotes
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">3</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.pendingQuotesCount ?? 0}
+            </div>
             <div className="text-xs font-semibold text-slate-400">Pending Quotations</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">₹50.4L potential</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+              {dashboardData?.stats?.pendingQuotesValueDisplay || "₹0"} potential
+            </div>
           </div>
         </div>
 
         {/* Stat Card 6 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              +50%
+              Deals
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">3</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.completedSalesCount ?? 0}
+            </div>
             <div className="text-xs font-semibold text-slate-400">Completed Sales</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">This month</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Fulfilled orders</div>
           </div>
         </div>
 
         {/* Stat Card 7 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
               <IndianRupee className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              +8%
+              Today
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">₹1.70Cr</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.todaysRevenueDisplay || "₹0"}
+            </div>
             <div className="text-xs font-semibold text-slate-400">Today's Revenue</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">From 1 transaction</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Realized sales</div>
           </div>
         </div>
 
         {/* Stat Card 8 */}
         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Percent className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
-              +15%
+              Fees
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-extrabold text-slate-900">₹65,650</div>
+            <div className="text-2xl font-extrabold text-slate-900">
+              {dashboardData?.stats?.totalCommissionDisplay || "₹0"}
+            </div>
             <div className="text-xs font-semibold text-slate-400">Total Commission</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Platform earnings</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Platform fee paid</div>
           </div>
         </div>
 
@@ -422,31 +447,27 @@ const IndustryDashboard = () => {
             </div>
 
             <div className="h-56 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-100 relative">
-              <div className="absolute inset-x-0 top-0 text-[10px] text-slate-300 border-b border-dashed border-slate-100 pt-1">₹2.2Cr / 600 MT</div>
-              <div className="absolute inset-x-0 top-1/3 text-[10px] text-slate-300 border-b border-dashed border-slate-100 pt-1">₹1.5Cr / 450 MT</div>
-              <div className="absolute inset-x-0 top-2/3 text-[10px] text-slate-300 border-b border-dashed border-slate-100 pt-1">₹0.8Cr / 300 MT</div>
+              <div className="absolute inset-x-0 top-0 text-[10px] text-slate-300 border-b border-dashed border-slate-100 pt-1">₹2.2Cr / 600 Tons</div>
+              <div className="absolute inset-x-0 top-1/3 text-[10px] text-slate-300 border-b border-dashed border-slate-100 pt-1">₹1.5Cr / 450 Tons</div>
+              <div className="absolute inset-x-0 top-2/3 text-[10px] text-slate-300 border-b border-dashed border-slate-100 pt-1">₹0.8Cr / 300 Tons</div>
 
-              {[
-                { month: "Jan", rev: 55, vol: 45 },
-                { month: "Feb", rev: 70, vol: 55 },
-                { month: "Mar", vol: 45, rev: 50 },
-                { month: "Apr", rev: 85, vol: 70 },
-                { month: "May", rev: 90, vol: 75 },
-                { month: "Jun", rev: 75, vol: 65 },
-                { month: "Jul", rev: 100, vol: 85 },
-                { month: "Aug", rev: 48, vol: 40 },
-              ].map((bar, i) => (
+              {(chartMonths.length > 0 ? chartMonths : [
+                { month: "Jan", rev: 0, vol: 0 }, { month: "Feb", rev: 0, vol: 0 },
+                { month: "Mar", rev: 0, vol: 0 }, { month: "Apr", rev: 0, vol: 0 },
+                { month: "May", rev: 0, vol: 0 }, { month: "Jun", rev: 0, vol: 0 },
+                { month: "Jul", rev: 0, vol: 0 }, { month: "Aug", rev: 0, vol: 0 },
+              ]).map((bar, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center h-full justify-end z-10">
                   <div className="w-full flex items-end justify-center gap-1.5 h-full">
-                    <div 
-                      className="w-4 bg-blue-600 rounded-t-xs transition-all hover:opacity-90 cursor-pointer" 
-                      style={{ height: `${bar.rev}%` }}
-                      title={`Revenue: ${bar.rev}%`}
+                    <div
+                      className="w-4 bg-blue-600 rounded-t-xs transition-all hover:opacity-90 cursor-pointer"
+                      style={{ height: `${Math.max(bar.rev, 2)}%` }}
+                      title={bar.revRaw ? `Revenue: ₹${Number(bar.revRaw).toLocaleString("en-IN")}` : `Revenue: ${bar.rev}%`}
                     ></div>
-                    <div 
-                      className="w-4 bg-sky-200 rounded-t-xs transition-all hover:opacity-90 cursor-pointer" 
-                      style={{ height: `${bar.vol}%` }}
-                      title={`Volume: ${bar.vol}%`}
+                    <div
+                      className="w-4 bg-sky-200 rounded-t-xs transition-all hover:opacity-90 cursor-pointer"
+                      style={{ height: `${Math.max(bar.vol, 2)}%` }}
+                      title={bar.volRaw ? `Volume: ${(bar.volRaw / 1000).toFixed(1)} Tons` : `Volume: ${bar.vol}%`}
                     ></div>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400 mt-2">{bar.month}</span>
@@ -463,46 +484,39 @@ const IndustryDashboard = () => {
             </div>
 
             <div className="h-44 relative flex items-end">
-              <svg className="w-full h-36 overflow-visible" viewBox="0 0 500 120">
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M 0,80 Q 70,55 140,75 T 280,35 T 420,15 T 500,90 L 500,120 L 0,120 Z"
-                  fill="url(#chartGradient)"
-                />
-                <path
-                  d="M 0,80 Q 70,55 140,75 T 280,35 T 420,15 T 500,90"
-                  fill="none"
-                  stroke="#2563eb"
-                  strokeWidth="3"
-                />
-                {[
-                  { x: 0, y: 80, val: "₹1.2Cr" },
-                  { x: 70, y: 65, val: "₹1.4Cr" },
-                  { x: 140, y: 75, val: "₹1.1Cr" },
-                  { x: 210, y: 45, val: "₹1.7Cr" },
-                  { x: 280, y: 35, val: "₹1.8Cr" },
-                  { x: 350, y: 50, val: "₹1.6Cr" },
-                  { x: 420, y: 15, val: "₹2.2Cr" },
-                  { x: 500, y: 90, val: "₹1.0Cr" },
-                ].map((pt, i) => (
-                  <circle key={i} cx={pt.x} cy={pt.y} r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
-                ))}
-              </svg>
-
+              {(() => {
+                const months = chartMonths.length > 0 ? chartMonths : Array(8).fill({ month: "—", rev: 0, revRaw: 0 });
+                const maxRev = Math.max(...months.map((m) => m.revRaw || 0), 1);
+                const pts = months.map((m, i) => ({
+                  x: Math.round((i / (months.length - 1)) * 500),
+                  y: Math.round(100 - ((m.revRaw || 0) / maxRev) * 90),
+                  val: m.revRaw ? `₹${(m.revRaw / 100000).toFixed(1)}L` : "₹0",
+                  month: m.month,
+                }));
+                const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
+                const fill = d + ` L ${pts[pts.length - 1].x},120 L 0,120 Z`;
+                return (
+                  <svg className="w-full h-36 overflow-visible" viewBox="0 0 500 120">
+                    <defs>
+                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={fill} fill="url(#chartGradient)" />
+                    <path d={d} fill="none" stroke="#2563eb" strokeWidth="3" />
+                    {pts.map((pt, i) => (
+                      <circle key={i} cx={pt.x} cy={pt.y} r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="2">
+                        <title>{pt.month}: {pt.val}</title>
+                      </circle>
+                    ))}
+                  </svg>
+                );
+              })()}
               <div className="absolute bottom-0 inset-x-0 flex justify-between text-[11px] font-semibold text-slate-400 pt-2 border-t border-slate-100">
-                <span>Jan</span>
-                <span>Feb</span>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-                <span>Jun</span>
-                <span>Jul</span>
-                <span>Aug</span>
+                {(chartMonths.length > 0 ? chartMonths : Array(8).fill(null)).map((m, i) => (
+                  <span key={i}>{m?.month || "—"}</span>
+                ))}
               </div>
             </div>
           </div>
@@ -517,27 +531,39 @@ const IndustryDashboard = () => {
             <h2 className="text-base font-bold text-slate-900">Material Mix</h2>
             <p className="text-xs text-slate-400 mb-4">By inventory volume %</p>
 
-            <div className="flex items-center justify-center my-3">
-              <div className="relative w-36 h-36 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#2563eb" strokeWidth="5" strokeDasharray="42 100" strokeDashoffset="0" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#f97316" strokeWidth="5" strokeDasharray="18 100" strokeDashoffset="-42" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#22c55e" strokeWidth="5" strokeDasharray="15 100" strokeDashoffset="-60" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#a855f7" strokeWidth="5" strokeDasharray="12 100" strokeDashoffset="-75" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#ef4444" strokeWidth="5" strokeDasharray="8 100" strokeDashoffset="-87" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#64748b" strokeWidth="5" strokeDasharray="5 100" strokeDashoffset="-95" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700 pt-2 border-t border-slate-100">
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Steel 42%</div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Copper 18%</div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Aluminium 15%</div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Plastic 12%</div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> E-Waste 8%</div>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Others 5%</div>
-            </div>
+            {materialMix.length > 0 ? (
+              <>
+                <div className="flex items-center justify-center my-3">
+                  <div className="relative w-36 h-36 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      {(() => {
+                        let offset = 0;
+                        return materialMix.map((m, i) => {
+                          const el = (
+                            <circle key={i} cx="18" cy="18" r="14" fill="none" stroke={m.color} strokeWidth="5"
+                              strokeDasharray={`${m.pct} 100`} strokeDashoffset={-offset}>
+                              <title>{m.name}: {m.pct}%</title>
+                            </circle>
+                          );
+                          offset += m.pct;
+                          return el;
+                        });
+                      })()}
+                    </svg>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700 pt-2 border-t border-slate-100">
+                  {materialMix.map((m, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }}></span>
+                      {m.name} {m.pct}%
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-32 text-xs text-slate-400">No sales data yet</div>
+            )}
           </div>
 
           {/* Recent Activity Feed */}
@@ -545,52 +571,22 @@ const IndustryDashboard = () => {
             <div>
               <h2 className="text-base font-bold text-slate-900 mb-4">Recent Activity</h2>
 
-              <div className="space-y-4 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 mt-1 shrink-0"></span>
-                  <div>
-                    <div className="font-bold text-slate-900">New Quotation Received</div>
-                    <div className="text-slate-500 leading-tight">Sanjay Metals submitted a quotation of ₹37,800/MT for MS Steel Scrap (45 MT)</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">10 minutes ago</div>
-                  </div>
+              {recentActivity.length > 0 ? (
+                <div className="space-y-4 text-xs">
+                  {recentActivity.map((act) => (
+                    <div key={act.id} className="flex items-start gap-2.5">
+                      <span className={`w-2 h-2 rounded-full ${act.color} mt-1 shrink-0`}></span>
+                      <div>
+                        <div className="font-bold text-slate-900">{act.title}</div>
+                        <div className="text-slate-500 leading-tight">{act.desc}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{act.ago}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="flex items-start gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0"></span>
-                  <div>
-                    <div className="font-bold text-slate-900">Auction Won</div>
-                    <div className="text-slate-500 leading-tight">Metro Recyclers won the auction for Mixed E-Waste batch at ₹91,000/MT</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">2 hours ago</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-slate-400 mt-1 shrink-0"></span>
-                  <div>
-                    <div className="font-bold text-slate-900">Tender Closed</div>
-                    <div className="text-slate-500 leading-tight">Tender TND-003 for Brass Turning Scrap has been closed. 11 offers received.</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">1 day ago</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-slate-400 mt-1 shrink-0"></span>
-                  <div>
-                    <div className="font-bold text-slate-900">Inventory Updated</div>
-                    <div className="text-slate-500 leading-tight">Stock deducted for SAL-001 — 45 MT MS Steel HMS cleared from Warehouse A Bay 3</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">1 day ago</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 mt-1 shrink-0"></span>
-                  <div>
-                    <div className="font-bold text-slate-900">Listing Expiring Soon</div>
-                    <div className="text-slate-500 leading-tight">LST-001 MS Steel HMS expires in 7 days. Renew or extend the listing.</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">2 days ago</div>
-                  </div>
-                </div>
-              </div>
+              ) : (
+                <div className="flex items-center justify-center h-24 text-xs text-slate-400">No recent activity</div>
+              )}
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-100">
@@ -688,40 +684,11 @@ const IndustryDashboard = () => {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-amber-50/50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
-                  <tr>
-                    <th className="px-4 py-3">SALE ID</th>
-                    <th className="px-4 py-3">MATERIAL</th>
-                    <th className="px-4 py-3">BUYER</th>
-                    <th className="px-4 py-3">VALUE</th>
-                    <th className="px-4 py-3">STATUS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-50/80">
-                      <td className="px-4 py-3 font-semibold text-slate-800">{tx.id}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{tx.material}</td>
-                      <td className="px-4 py-3 text-slate-600">{tx.buyer}</td>
-                      <td className="px-4 py-3 font-extrabold text-slate-900">{tx.value}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          tx.status === "Completed"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : tx.status === "Pending"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-rose-100 text-rose-800"
-                        }`}>
-                          {tx.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <MaterialTable
+              columns={recentTransactionsColumns}
+              data={transactions}
+              getRowId={(row) => row.id}
+            />
           </div>
         </div>
 
@@ -748,7 +715,7 @@ const IndustryDashboard = () => {
                     id: auc.id,
                     title: auc.title,
                     topBid: auc.currentBid,
-                    pricePerUnit: "₹37,800/MT"
+                    pricePerUnit: "₹37,800/Ton"
                   })}
                   className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-slate-300 transition-all cursor-pointer flex items-center justify-between"
                 >

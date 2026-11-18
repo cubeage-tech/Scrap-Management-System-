@@ -36,12 +36,12 @@ export const dealerColumns = [
   },
   {
     accessorKey: "quantityMT",
-    header: "QUANTITY (MT)",
+    header: "QUANTITY (Tons)",
     filterVariant: "range",
   },
   {
     accessorKey: "pricePerMT",
-    header: "PRICE / MT",
+    header: "PRICE / Ton",
     filterVariant: "range",
   },
   {

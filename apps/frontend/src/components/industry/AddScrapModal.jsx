@@ -2,11 +2,12 @@ import { useState } from "react";
 import { X, Package, Tag, Scale, DollarSign, Layers, Plus } from "lucide-react";
 
 const AddScrapModal = ({ isOpen, onClose, onAddScrap, initialMode = "B2B Marketplace" }) => {
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     category: "Ferrous Metal",
     weight: "",
-    unit: "MT",
+    unit: "Tons",
     grade: "Grade A",
     pricePerUnit: "",
     mode: initialMode,
@@ -17,8 +18,9 @@ const AddScrapModal = ({ isOpen, onClose, onAddScrap, initialMode = "B2B Marketp
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
     if (!formData.title || !formData.weight || !formData.pricePerUnit) {
-      alert("Please fill in all required fields.");
+      setError("Please fill in all required fields.");
       return;
     }
 
@@ -72,6 +74,11 @@ const AddScrapModal = ({ isOpen, onClose, onAddScrap, initialMode = "B2B Marketp
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
+              {error}
+            </div>
+          )}
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-700 mb-1">
               Scrap Material Name / Description *
@@ -140,15 +147,15 @@ const AddScrapModal = ({ isOpen, onClose, onAddScrap, initialMode = "B2B Marketp
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   className="px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-900 text-xs font-bold cursor-pointer"
                 >
-                  <option value="MT">MT</option>
-                  <option value="Kg">Kg</option>
+                  <option value="kg">kg</option>
+                  <option value="Tons">Tons</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-700 mb-1 flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-[#011C6B]" /> Reserve Price (₹ / MT) *
+                <DollarSign className="w-3.5 h-3.5 text-[#011C6B]" /> Reserve Price (₹ / Ton) *
               </label>
               <input 
                 type="number" 

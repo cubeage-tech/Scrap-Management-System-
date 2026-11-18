@@ -1,3 +1,5 @@
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Package,
   FileText,
@@ -9,6 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
+
 import {
   Area,
   AreaChart,
@@ -22,100 +25,25 @@ import {
 } from "recharts";
 
 import StatusBadge from "../../components/common/StatusBadge";
+import ApiService from "../../core/services/api.service";
 
-// --- Mock data ---
-// Replace with API calls once the buyer dashboard endpoints are ready.
-const statCards = [
-  {
-    title: "Available Scrap",
-    value: "1,842 MT",
-    change: "+94 MT",
-    isPositive: true,
-    note: "matching your filters",
-    icon: Package,
-    iconClass: "bg-primary/10 text-primary",
-  },
-  {
-    title: "Accepted Quotations",
-    value: "14",
-    change: "+2",
-    isPositive: true,
-    icon: FileText,
-    iconClass: "bg-success/10 text-success",
-  },
-  {
-    title: "Open Orders",
-    value: "8",
-    note: "3 in transit",
-    icon: Truck,
-    iconClass: "bg-info/10 text-info",
-  },
-  {
-    title: "Payments Due",
-    value: "₹12.4 L",
-    change: "-8.1%",
-    isPositive: false,
-    icon: CreditCard,
-    iconClass: "bg-warning/10 text-warning",
-  },
-  {
-    title: "Live Auctions",
-    value: "6",
-    note: "2 shortlisted",
-    icon: Gavel,
-    iconClass: "bg-destructive/10 text-destructive",
-  },
-  {
-    title: "Spend (MTD)",
-    value: "₹48.6 L",
-    change: "+6.4%",
-    isPositive: true,
-    icon: IndianRupee,
-    iconClass: "bg-primary/10 text-primary",
-  },
-];
-
-const spendData = [
-  { name: "Jan", value: 47 },
-  { name: "Feb", value: 49 },
-  { name: "Mar", value: 56 },
-  { name: "Apr", value: 54 },
-  { name: "May", value: 68 },
-  { name: "Jun", value: 76 },
-  { name: "Jul", value: 84 },
-];
-
-const materialData = [
-  { name: "Steel Turnings", value: 290 },
-  { name: "Copper Millberry", value: 240 },
-  { name: "Aluminium 6063", value: 190 },
-  { name: "E-Waste PCB", value: 155 },
-  { name: "HDPE Regrind", value: 105 },
-];
-
-const quotations = [
-  { id: "QTN-8841", title: "Copper Scrap (Millberry)", meta: "12.5 MT · 28 Jul 2026", amount: "₹7,38,000", status: "Pending" },
-  { id: "QTN-8840", title: "Aluminium Extrusion 6063", meta: "21.2 MT · 27 Jul 2026", amount: "₹3,94,500", status: "Approved" },
-  { id: "QTN-8839", title: "HDPE Plastic Regrind", meta: "33 MT · 26 Jul 2026", amount: "₹1,45,000", status: "Rejected" },
-  { id: "QTN-8838", title: "Brass Honey Scrap", meta: "6.8 MT · 24 Jul 2026", amount: "₹3,05,000", status: "Completed" },
-];
-
-const purchases = [
-  { id: "ORD-5521", title: "E-Waste PCB Assorted", meta: "4.4 MT · 26 Jul 2026", amount: "₹5,46,000", status: "Completed" },
-  { id: "ORD-5520", title: "Rubber Tyre Scrap", meta: "40 MT · 24 Jul 2026", amount: "₹1,12,000", status: "Completed" },
-  { id: "ORD-5519", title: "Kraft Paper Waste", meta: "52 MT · 23 Jul 2026", amount: "₹78,000", status: "Pending" },
-  { id: "ORD-5518", title: "Steel Turnings", meta: "30 MT · 21 Jul 2026", amount: "₹8,12,000", status: "Approved" },
-];
+const formatCurrency = (val) => {
+  const num = Number(val || 0);
+  if (num >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
+  return `₹${num.toLocaleString("en-IN")}`;
+};
 
 const STATUS_VARIANTS = {
   Pending: "warning",
+  SUBMITTED: "warning",
   Approved: "success",
+  ACCEPTED: "success",
   Rejected: "danger",
+  REJECTED: "danger",
   Completed: "success",
+  COMPLETED: "success",
 };
 
-// Recharts needs literal colour values, so the design tokens are referenced
-// as CSS variables instead of Tailwind utility classes.
 const chartTooltipStyle = {
   backgroundColor: "var(--card)",
   color: "var(--card-foreground)",
@@ -137,14 +65,174 @@ const ListRow = ({ item }) => (
 
     <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
       <span className="text-sm font-semibold text-card-foreground">{item.amount}</span>
-      <StatusBadge label={item.status} variant={STATUS_VARIANTS[item.status]} />
+      <StatusBadge label={item.status} variant={STATUS_VARIANTS[item.status] || "neutral"} />
     </div>
   </div>
 );
 
 const BuyerDashboard = () => {
+  const navigate = useNavigate();
+  const [buyerData, setBuyerData] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [auctions, setAuctions] = useState([]);
+  const [_loading, setLoading] = useState(true);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [reportsRes, listingsRes, auctionsRes] = await Promise.all([
+        ApiService.getBuyerReports().catch(() => null),
+        ApiService.getListings().catch(() => null),
+        ApiService.getAuctions().catch(() => null),
+      ]);
+
+      if (reportsRes?.data?.success && reportsRes.data.data) {
+        setBuyerData(reportsRes.data.data);
+      }
+      if (listingsRes?.data?.success && Array.isArray(listingsRes.data.data)) {
+        setListings(listingsRes.data.data);
+      }
+      if (auctionsRes?.data?.success && Array.isArray(auctionsRes.data.data)) {
+        setAuctions(auctionsRes.data.data);
+      }
+    } catch (err) {
+      console.error("Error loading buyer dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchDashboardData(); }, []);
+
+  // Aggregated KPIs
+  const kpis = buyerData?.kpis || {};
+
+  const availableScrapMT = useMemo(() => {
+    const totalKg = listings.reduce((sum, l) => sum + Number(l.quantityKg || 0), 0);
+    return (totalKg / 1000).toFixed(1);
+  }, [listings]);
+
+  const liveAuctionsCount = useMemo(() => {
+    return auctions.filter((a) => ["LIVE", "EXTENDED"].includes(a.status)).length;
+  }, [auctions]);
+
+  const statCards = [
+    {
+      title: "Available Scrap",
+      value: `${availableScrapMT} Tons`,
+      change: "Active listings",
+      isPositive: true,
+      note: "on marketplace",
+      icon: Package,
+      iconClass: "bg-primary/10 text-primary",
+    },
+    {
+      title: "Accepted Quotations",
+      value: String(kpis.acceptedCount || 0),
+      change: "Approved",
+      isPositive: true,
+      icon: FileText,
+      iconClass: "bg-success/10 text-success",
+    },
+    {
+      title: "Open Purchases",
+      value: String(buyerData?.purchasesHistory?.length || 0),
+      note: "fulfilled deals",
+      icon: Truck,
+      iconClass: "bg-info/10 text-info",
+    },
+    {
+      title: "Total Procurement Spend",
+      value: formatCurrency(kpis.totalProcurementSpend || 0),
+      change: "Committed capital",
+      isPositive: true,
+      icon: CreditCard,
+      iconClass: "bg-warning/10 text-warning",
+    },
+    {
+      title: "Live Auctions",
+      value: String(liveAuctionsCount),
+      note: "active bidding",
+      icon: Gavel,
+      iconClass: "bg-destructive/10 text-destructive",
+    },
+    {
+      title: "Spend (MTD)",
+      value: formatCurrency(kpis.totalProcurementSpend || 0),
+      change: "Total spend",
+      isPositive: true,
+      icon: IndianRupee,
+      iconClass: "bg-primary/10 text-primary",
+    },
+  ];
+
+  // Spend chart data grouped by month
+  const spendData = useMemo(() => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const map = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = monthNames[d.getMonth()];
+      map[label] = { name: label, value: 0 };
+    }
+
+    const purchases = buyerData?.purchasesHistory || [];
+    purchases.forEach((p) => {
+      const date = new Date(p.completedAt || p.createdAt || 0);
+      const label = monthNames[date.getMonth()];
+      if (map[label]) {
+        map[label].value += Number(p.totalValue || 0) / 100000; // in Lakhs
+      }
+    });
+
+    return Object.values(map);
+  }, [buyerData]);
+
+  // Material category breakdown chart
+  const materialData = useMemo(() => {
+    const map = {};
+    const purchases = buyerData?.purchasesHistory || [];
+    purchases.forEach((p) => {
+      const cat = p.category || "General Scrap";
+      if (!map[cat]) map[cat] = 0;
+      map[cat] += Number(p.quantityKg || 0) / 1000; // in MT
+    });
+
+    const list = Object.entries(map).map(([name, val]) => ({ name, value: Math.round(val) }));
+    if (list.length === 0) {
+      return [{ name: "General Scrap", value: 0 }];
+    }
+    return list;
+  }, [buyerData]);
+
+  // Mapped quotations list
+  const quotations = useMemo(() => {
+    const history = buyerData?.quotationsHistory || [];
+    return history.slice(0, 5).map((q) => ({
+      id: `QTN-${q.id.slice(0, 6).toUpperCase()}`,
+      title: `${q.category} Scrap`,
+      meta: `${(Number(q.quantityKg || 0) / 1000).toFixed(1)} Tons · ${new Date(q.createdAt).toLocaleDateString("en-IN")}`,
+      amount: formatCurrency(q.totalValue),
+      status: q.status === "ACCEPTED" ? "Approved" : q.status === "SUBMITTED" ? "Pending" : q.status,
+    }));
+  }, [buyerData]);
+
+  // Mapped purchases list
+  const purchases = useMemo(() => {
+    const history = buyerData?.purchasesHistory || [];
+    return history.slice(0, 5).map((p) => ({
+      id: `ORD-${p.id.slice(0, 6).toUpperCase()}`,
+      title: `${p.sellerName || "Industrial Seller"} Deal`,
+      meta: `${(Number(p.quantityKg || 0) / 1000).toFixed(1)} Tons · ${new Date(p.completedAt || 0).toLocaleDateString("en-IN")}`,
+      amount: formatCurrency(p.totalValue),
+      status: "Completed",
+    }));
+  }, [buyerData]);
+
   return (
-    <section>
+    <section className="text-left font-sans">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 mb-3 text-xs text-muted-foreground">
         <span>SmartScrap AI</span>
@@ -158,7 +246,7 @@ const BuyerDashboard = () => {
       <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground md:text-2xl">
-            Verma Recycling Pvt. Ltd.
+            Buyer Procurement Dashboard
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Procurement pipeline, quotation status and settlement overview.
@@ -168,13 +256,15 @@ const BuyerDashboard = () => {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold rounded-lg border shadow-sm transition-colors bg-secondary text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground"
+            onClick={() => navigate("/buyer/quotations")}
+            className="px-4 py-2 text-sm font-semibold rounded-lg border shadow-sm transition-colors bg-secondary text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground cursor-pointer"
           >
             My quotations
           </button>
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-opacity bg-primary text-primary-foreground hover:opacity-90"
+            onClick={() => navigate("/buyer/marketplace")}
+            className="px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-opacity bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
           >
             Browse marketplace
           </button>
@@ -238,7 +328,7 @@ const BuyerDashboard = () => {
               Procurement spend
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Settled purchase value by month
+              Settled purchase value (₹ Lakhs) by month
             </p>
           </div>
 
@@ -260,8 +350,6 @@ const BuyerDashboard = () => {
                   dy={10}
                 />
                 <YAxis
-                  domain={[0, 100]}
-                  ticks={[0, 25, 50, 75, 100]}
                   axisLine={false}
                   tickLine={false}
                   tick={axisTick}
@@ -299,8 +387,6 @@ const BuyerDashboard = () => {
               >
                 <XAxis
                   type="number"
-                  domain={[0, 300]}
-                  ticks={[0, 75, 150, 225, 300]}
                   axisLine={false}
                   tickLine={false}
                   tick={axisTick}
@@ -316,7 +402,7 @@ const BuyerDashboard = () => {
                 <Tooltip
                   cursor={{ fill: "transparent" }}
                   contentStyle={chartTooltipStyle}
-                  formatter={(value) => [`${value} MT`, "Purchased"]}
+                  formatter={(value) => [`${value} Tons`, "Purchased"]}
                 />
                 <Bar
                   dataKey="value"
@@ -339,16 +425,21 @@ const BuyerDashboard = () => {
             </h2>
             <button
               type="button"
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors bg-secondary text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              onClick={() => navigate("/buyer/quotations")}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors bg-secondary text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground cursor-pointer"
             >
               View all
             </button>
           </div>
 
           <div className="border-t border-border">
-            {quotations.map((item) => (
-              <ListRow key={item.id} item={item} />
-            ))}
+            {quotations.length === 0 ? (
+              <p className="p-6 text-xs text-muted-foreground text-center">No quotations submitted yet.</p>
+            ) : (
+              quotations.map((item) => (
+                <ListRow key={item.id} item={item} />
+              ))
+            )}
           </div>
         </div>
 
@@ -360,9 +451,13 @@ const BuyerDashboard = () => {
           </div>
 
           <div className="border-t border-border">
-            {purchases.map((item) => (
-              <ListRow key={item.id} item={item} />
-            ))}
+            {purchases.length === 0 ? (
+              <p className="p-6 text-xs text-muted-foreground text-center">No completed purchases yet.</p>
+            ) : (
+              purchases.map((item) => (
+                <ListRow key={item.id} item={item} />
+              ))
+            )}
           </div>
         </div>
       </div>

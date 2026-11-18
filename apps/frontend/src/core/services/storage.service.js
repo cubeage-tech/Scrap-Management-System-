@@ -1,22 +1,48 @@
 import { STORAGE_KEYS } from '../constants/app.constant';
 
-export const getToken = () => localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+class StorageService {
+  static getData(key) {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : null;
+    } catch {
+      return localStorage.getItem(key);
+    }
+  }
 
-export const setToken = (token) => localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+  static setData(key, value) {
+    if (typeof value === 'string') {
+      localStorage.setItem(key, value);
+    } else {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+  }
 
-export const removeToken = () => localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+  static removeData(key) {
+    localStorage.removeItem(key);
+  }
 
-export const getStoredUser = () => {
-  const raw = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
-  return raw ? JSON.parse(raw) : null;
-};
+  static clear() {
+    localStorage.clear();
+  }
+}
 
-export const setStoredUser = (user) =>
-  localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(user));
+// Convenience exports for backward compatibility
+export const getToken = () => StorageService.getData(STORAGE_KEYS.AUTH_TOKEN);
 
-export const removeStoredUser = () => localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+export const setToken = (token) => StorageService.setData(STORAGE_KEYS.AUTH_TOKEN, token);
+
+export const removeToken = () => StorageService.removeData(STORAGE_KEYS.AUTH_TOKEN);
+
+export const getStoredUser = () => StorageService.getData(STORAGE_KEYS.AUTH_USER);
+
+export const setStoredUser = (user) => StorageService.setData(STORAGE_KEYS.AUTH_USER, user);
+
+export const removeStoredUser = () => StorageService.removeData(STORAGE_KEYS.AUTH_USER);
 
 export const clearSession = () => {
   removeToken();
   removeStoredUser();
 };
+
+export default StorageService;

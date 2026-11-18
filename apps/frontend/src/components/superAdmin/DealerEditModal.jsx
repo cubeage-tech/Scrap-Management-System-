@@ -27,6 +27,7 @@ const getInitials = (name = "") => {
 };
 
 const DealerEditModal = ({ isOpen, onClose, dealer, onUpdateDealer }) => {
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: dealer?.name || "",
     code: dealer?.code || dealer?.id || "",
@@ -44,8 +45,9 @@ const DealerEditModal = ({ isOpen, onClose, dealer, onUpdateDealer }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
     if (!formData.name || !formData.location) {
-      alert("Please fill in company name and location.");
+      setError("Please fill in company name and location.");
       return;
     }
 
@@ -102,6 +104,11 @@ const DealerEditModal = ({ isOpen, onClose, dealer, onUpdateDealer }) => {
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
+              {error}
+            </div>
+          )}
           {/* Company Name & Code */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">

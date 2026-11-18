@@ -1,10 +1,35 @@
 import prisma from '../../core/lib/prisma.js';
 
 export const getCategories = async () => {
-  return await prisma.category.findMany({
+  let categories = await prisma.category.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' }
   });
+
+  if (categories.length === 0) {
+    const defaultCategories = [
+      "Heavy Steel",
+      "Copper Wire",
+      "Aluminium Extrusion",
+      "Industrial Plastics",
+      "E-Waste Assorted",
+      "Paper & Cardboard",
+      "Brass Scrap",
+      "Mixed Metals"
+    ];
+
+    await prisma.category.createMany({
+      data: defaultCategories.map((name) => ({ name, isActive: true })),
+      skipDuplicates: true
+    });
+
+    categories = await prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' }
+    });
+  }
+
+  return categories;
 };
 
 export const getAllCategories = async () => {

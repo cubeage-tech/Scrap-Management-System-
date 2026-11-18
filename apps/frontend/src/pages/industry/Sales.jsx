@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   DollarSign,
   TrendingUp,
   Package,
   Truck,
   Download,
-  Filter,
   RefreshCw,
 } from "lucide-react";
 import MaterialTable from "../../components/common/MaterialTable";
@@ -25,94 +24,106 @@ const Sales = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  useEffect(() => {
-    fetchSalesData();
-  }, []);
-
   const fetchSalesData = async () => {
     setIsLoading(true);
     try {
-      const res = await ApiService.get("/reports/industry");
-      if (res?.data?.success && res.data.data) {
-        const report = res.data.data;
-        if (report.kpis) {
-          setKpis(report.kpis);
-        }
+      const [salesRes, scrapRes, tendersRes] = await Promise.all([
+        ApiService.getSales(),
+        ApiService.getScraps().catch(() => null),
+        ApiService.getTenders({ status: "AWARDED" }).catch(() => null),
+      ]);
 
-        if (report.salesHistory && report.salesHistory.length > 0) {
-          const mapped = report.salesHistory.map((s, idx) => ({
-            id: s.id,
-            orderId: `ORD-${s.id.slice(0, 6).toUpperCase()}`,
-            buyerName: s.buyerName || "Registered Dealer / Buyer",
-            location: "Industrial Zone",
-            material: s.category || "Scrap Material",
-            category: s.category || "Ferrous",
-            quantity: `${(Number(s.quantityKg || 0) / 1000).toFixed(1)} MT`,
-            totalValue: formatCurrency(s.totalValue),
-            rawTotal: Number(s.totalValue || 0),
-            paymentStatus: idx % 2 === 0 ? "Paid" : "Processing",
-            fulfillmentStatus: idx % 3 === 0 ? "InTransit" : "Completed",
-            date: new Date(s.completedAt || Date.now()).toLocaleDateString("en-IN", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-          }));
-          setSalesList(mapped);
-        } else {
-          // Fallback sample data if no sales exist in DB yet
-          setSalesList([
-            {
-              id: "S-101",
-              orderId: "ORD-99042",
-              buyerName: "Mahindra Recycling Hub",
-              location: "Pune Industrial Estate",
-              material: "MS Steel HMS 1&2",
-              category: "Steel",
-              quantity: "24.5 MT",
-              totalValue: formatCurrency(943250),
-              rawTotal: 943250,
-              paymentStatus: "Paid",
-              fulfillmentStatus: "Completed",
-              date: "2026-08-28",
-            },
-            {
-              id: "S-102",
-              orderId: "ORD-99041",
-              buyerName: "Tata Scrap Traders",
-              location: "Jamshedpur Yard",
-              material: "Copper Wire Scrap",
-              category: "Copper",
-              quantity: "8.2 MT",
-              totalValue: formatCurrency(594500),
-              rawTotal: 594500,
-              paymentStatus: "Paid",
-              fulfillmentStatus: "InTransit",
-              date: "2026-08-24",
-            },
-            {
-              id: "S-103",
-              orderId: "ORD-99040",
-              buyerName: "Hindalco Recycling",
-              location: "Belagavi Hub",
-              material: "Aluminium Offcuts",
-              category: "Aluminium",
-              quantity: "14.0 MT",
-              totalValue: formatCurrency(280000),
-              rawTotal: 280000,
-              paymentStatus: "Processing",
-              fulfillmentStatus: "Scheduled",
-              date: "2026-08-20",
-            },
-          ]);
+      const paymentStatusLabel = (status) => {
+        switch (status) {
+          case "COMPLETED":          return "Paid";
+          case "PAYMENT_PROCESSING": return "Processing";
+          case "PENDING_PAYMENT":    return "Awaiting Payment";
+          case "REFUNDED":           return "Refunded";
+          case "CANCELLED":          return "Cancelled";
+          default:                   return status || "Pending";
         }
+      };
+
+      // --- Quotation/auction-based sales ---
+      let quotationRows = [];
+      let quotationTotal = 0;
+      if (salesRes?.data?.success && salesRes.data.data?.sales) {
+        const { sales } = salesRes.data.data;
+        // Auction sales only appear here after delivery is confirmed (DELIVERED)
+        const visibleSales = sales.filter((s) =>
+          !s.auctionId || s.deliveryStatus === 'DELIVERED'
+        );
+        quotationTotal = visibleSales.length;
+        quotationRows = visibleSales.map((s) => ({
+          id: s.id,
+          orderId: `ORD-${s.id.slice(0, 6).toUpperCase()}`,
+          saleType: s.auctionId ? "Auction" : "Quotation",
+          buyerName: s.buyer?.companyName || "Registered Buyer",
+          location: `${s.buyer?.city || "Industrial Zone"}${s.buyer?.state ? `, ${s.buyer.state}` : ""}`,
+          material: s.listing?.scrapRecord?.description || s.listing?.scrapRecord?.category?.name || "Scrap Material",
+          category: s.listing?.scrapRecord?.category?.name || "Ferrous",
+          quantity: `${(Number(s.quantityKg || 0) / 1000).toFixed(1)} Tons`,
+          totalValue: formatCurrency(s.totalValue),
+          rawTotal: Number(s.totalValue || 0),
+          rawQty: Number(s.quantityKg || 0),
+          paymentStatus: paymentStatusLabel(s.status),
+          fulfillmentStatus: s.deliveryStatus === 'DELIVERED' ? "Delivered" : s.status === "COMPLETED" ? "Completed" : s.status === "CANCELLED" ? "Cancelled" : s.status === "REFUNDED" ? "Refunded" : "Pending",
+          deliveryStatus: s.deliveryStatus || null,
+          date: new Date(s.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }),
+          isCompleted: s.status === "COMPLETED",
+        }));
       }
+
+      // --- Tender-award-based sales ---
+      let tenderRows = [];
+      if (tendersRes?.data?.success && Array.isArray(tendersRes.data.data)) {
+        const awardedTenders = tendersRes.data.data.filter((t) => t.status === "AWARDED" && t.award);
+        tenderRows = awardedTenders.map((t) => ({
+          id: `tender-${t.id}`,
+          orderId: t.ref || `TND-${t.id.slice(0, 6).toUpperCase()}`,
+          saleType: "Tender",
+          buyerName: t.award.dealer?.companyName || "Awarded Dealer",
+          location: `${t.award.dealer?.city || ""}${t.award.dealer?.state ? `, ${t.award.dealer.state}` : ""}` || "Industrial Zone",
+          material: t.scrapRecord?.description || t.scrapRecord?.category?.name || "Scrap Material",
+          category: t.scrapRecord?.category?.name || "Ferrous",
+          quantity: `${(Number(t.quantityKg || 0) / 1000).toFixed(1)} Tons`,
+          totalValue: formatCurrency(t.award.finalTotalValue),
+          rawTotal: Number(t.award.finalTotalValue || 0),
+          rawQty: Number(t.quantityKg || 0),
+          paymentStatus: "Paid",
+          fulfillmentStatus: "Completed",
+          date: new Date(t.award.awardedAt || t.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }),
+          isCompleted: true,
+        }));
+      }
+
+      const allRows = [...quotationRows, ...tenderRows].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setSalesList(allRows);
+
+      const completedRows = allRows.filter((r) => r.isCompleted);
+      const rev   = completedRows.reduce((sum, r) => sum + r.rawTotal, 0);
+      const volKg = completedRows.reduce((sum, r) => sum + r.rawQty, 0);
+
+      let availableKg = 0;
+      if (scrapRes?.data?.success && Array.isArray(scrapRes.data.data)) {
+        availableKg = scrapRes.data.data.reduce((sum, s) => sum + Number(s.availableQuantityKg || 0), 0);
+      }
+
+      setKpis({
+        totalRevenue: rev,
+        totalSoldKg: volKg,
+        totalSalesCount: quotationTotal + tenderRows.length,
+        availableStockKg: availableKg,
+      });
     } catch (err) {
       console.error("Error fetching sales orders:", err);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchSalesData(); }, []);
 
   const rowSelection = useMemo(
     () => Object.fromEntries(selectedIds.map((id) => [id, true])),

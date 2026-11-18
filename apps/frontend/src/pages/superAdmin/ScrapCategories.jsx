@@ -3,24 +3,22 @@ import { Download, Plus, X, Info } from "lucide-react";
 
 import MaterialTable from "../../components/common/MaterialTable";
 import ApiService from "../../core/services/api.service";
+import Toast from "../../components/common/Toast";
 import { scrapCategoriesTableConfig } from "../../configs/tables/scrapCategoriesTable.config";
 
 const ScrapCategories = () => {
   const [categories, setCategories] = useState([]);
   const [selected, setSelected] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   const [newCategory, setNewCategory] = useState({
     name: "",
     materials: "",
     status: "Active",
   });
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -52,6 +50,9 @@ const ScrapCategories = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchCategories(); }, []);
+
   // Row selection state
   const rowSelection = useMemo(
     () => Object.fromEntries(selected.map((id) => [id, true])),
@@ -68,9 +69,10 @@ const ScrapCategories = () => {
       await ApiService.deleteCategory(category.id);
       setCategories((previous) => previous.filter((c) => c.id !== category.id));
       setSelected((previous) => previous.filter((id) => id !== category.id));
+      setToast({ message: `Category "${category.name}" deleted successfully`, type: "success" });
     } catch (err) {
       console.error("Failed to delete category:", err);
-      alert(err?.response?.data?.message || "Failed to delete category");
+      setToast({ message: err?.response?.data?.message || "Failed to delete category", type: "error" });
     }
   };
 
@@ -287,6 +289,12 @@ const ScrapCategories = () => {
           </div>
         </div>
       )}
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, message: "" })}
+      />
     </div>
   );
 };

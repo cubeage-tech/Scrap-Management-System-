@@ -14,6 +14,11 @@ const FULFILLMENT_STATUS_VARIANTS = {
   PendingPickup: "neutral",
 };
 
+const SALE_TYPE_COLORS = {
+  Tender:    "bg-purple-50 text-purple-700 border border-purple-200",
+  Quotation: "bg-blue-50 text-blue-700 border border-blue-200",
+};
+
 export const salesTableColumns = [
   {
     accessorKey: "orderId",
@@ -21,7 +26,12 @@ export const salesTableColumns = [
     Cell: ({ row }) => (
       <div>
         <div className="font-bold text-slate-900 leading-snug font-mono">{row.original.orderId}</div>
-        <div className="text-[10px] text-slate-400 font-medium">{row.original.date}</div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${SALE_TYPE_COLORS[row.original.saleType] || SALE_TYPE_COLORS.Quotation}`}>
+            {row.original.saleType || "Quotation"}
+          </span>
+          <span className="text-[10px] text-slate-400 font-medium">{row.original.date}</span>
+        </div>
       </div>
     ),
   },

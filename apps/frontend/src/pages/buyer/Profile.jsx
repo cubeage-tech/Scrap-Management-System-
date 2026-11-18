@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Building2, Mail, Phone, MapPin, ShieldCheck, FileCheck, User } from "lucide-react";
 
 const Profile = () => {
-  const [profile, setProfile] = useState({
+  const [profile] = useState({
     companyName: "Verma Recycling Pvt. Ltd.",
     businessType: "BUYER",
     gstNumber: "27AAACV9842Q1Z3",

@@ -1,5 +1,10 @@
 import prisma from '../../../core/lib/prisma.js';
 import { Prisma } from '@prisma/client';
+import {
+  notifyQuotationReceived,
+  notifyQuotationAccepted,
+  notifyQuotationRejected
+} from '../../notification/notification.service.js';
 
 const notFoundError = (message = 'Quotation not found') => {
   const error = new Error(message);
@@ -24,12 +29,36 @@ export const createQuotation = async (data, userId, organisationId) => {
     throw notFoundError('Listing not found');
   }
 
-  if (listing.status !== 'PUBLISHED') {
-    throw new Error('Can only submit quotations for PUBLISHED listings');
+  if (listing.status === 'DRAFT') {
+    const err = new Error('This listing is not yet published and cannot receive quotations.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (['CANCELLED', 'COMPLETED', 'OFFER_ACCEPTED', 'PAYMENT_PENDING', 'BIDDING_CLOSED', 'EXPIRED'].includes(listing.status)) {
+    throw new Error('Cannot submit quotation on closed, cancelled, or completed listings');
   }
 
   if (listing.scrapRecord.ownerId === organisationId) {
     throw forbiddenError('Cannot submit a quotation on your own listing');
+  }
+
+  // One active quotation per buyer per listing
+  const existing = await prisma.quotation.findFirst({
+    where: {
+      listingId: data.listingId,
+      buyerId: organisationId,
+      status: { in: ['SUBMITTED', 'ACCEPTED'] }
+    }
+  });
+  if (existing) {
+    const err = new Error(
+      existing.status === 'ACCEPTED'
+        ? 'Your quotation for this listing has already been accepted.'
+        : 'You have already submitted a quotation for this listing. Withdraw it before submitting a new one.'
+    );
+    err.statusCode = 409;
+    throw err;
   }
 
   // Use Decimal for exact financial arithmetic (avoids floating-point drift)
@@ -37,7 +66,7 @@ export const createQuotation = async (data, userId, organisationId) => {
     new Prisma.Decimal(data.quantityKg)
   );
 
-  return await prisma.quotation.create({
+  const quotation = await prisma.quotation.create({
     data: {
       listingId: data.listingId,
       buyerId: organisationId,
@@ -52,14 +81,36 @@ export const createQuotation = async (data, userId, organisationId) => {
       submittedByUserId: userId
     }
   });
+
+  // Notify seller organisation users
+  try {
+    const sellerOrg = await prisma.organisation.findUnique({
+      where: { id: listing.scrapRecord.ownerId },
+      include: { users: { take: 1 } }
+    });
+    if (sellerOrg?.users?.[0]?.id) {
+      await notifyQuotationReceived(
+        sellerOrg.users[0].id,
+        quotation.id,
+        listing.scrapRecord.description || 'Scrap Material',
+        data.pricePerKg
+      );
+    }
+  } catch (e) {
+    console.error('Error triggering quotation notification:', e);
+  }
+
+  return quotation;
 };
+
 
 export const getQuotations = async (filters, organisationId, role) => {
   const where = {};
 
-  // If industry, get quotations received for their listings
-  // If buyer/dealer, get quotations they submitted
-  if (role === 'INDUSTRY') {
+  // Industry: always see received quotations on their listings
+  // Dealer with view=received: see quotations received on their own listings (as seller)
+  // Dealer/Buyer default: see quotations they submitted
+  if (role === 'INDUSTRY' || (role === 'DEALER' && filters.view === 'received')) {
     where.listing = {
       scrapRecord: { ownerId: organisationId }
     };
@@ -145,7 +196,7 @@ export const acceptQuotation = async (id, organisationId) => {
     });
 
     if (accepted.count === 0) {
-      throw new Error('Quotation is not in SUBMITTED state');
+      throw new Error('Quotation is not in SUBMITTED state or already accepted');
     }
 
     // Reject sibling quotations on the same listing so only one can ever be accepted
@@ -158,13 +209,63 @@ export const acceptQuotation = async (id, organisationId) => {
       data: { status: 'REJECTED' }
     });
 
+    // Update listing status
     await tx.listing.update({
       where: { id: quotation.listingId },
       data: { status: 'OFFER_ACCEPTED' }
     });
 
-    return tx.quotation.findUnique({ where: { id } });
+    // Create Sale record atomically
+    let saleRecord = await tx.sale.findUnique({
+      where: { quotationId: id }
+    });
+
+    if (!saleRecord) {
+      saleRecord = await tx.sale.create({
+        data: {
+          listingId: quotation.listingId,
+          quotationId: id,
+          sellerId: quotation.listing.scrapRecord.ownerId,
+          buyerId: quotation.buyerId,
+          quantityKg: quotation.quantityKg,
+          pricePerKg: quotation.pricePerKg,
+          totalValue: quotation.totalValue,
+          status: 'PENDING_PAYMENT',
+          paymentExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        }
+      });
+    }
+
+    // Inventory creation and quantity updates happen only after payment (in sale COMPLETED transition)
+
+    const result = await tx.quotation.findUnique({
+      where: { id },
+      include: {
+        listing: { include: { scrapRecord: true } },
+        buyer: true
+      }
+    });
+
+    // Notify buyer that their quotation was accepted (fire-and-forget)
+    try {
+      const buyerOrg = await prisma.organisation.findUnique({
+        where: { id: quotation.buyerId },
+        include: { users: { take: 1 } }
+      });
+      if (buyerOrg?.users?.[0]?.id) {
+        await notifyQuotationAccepted(
+          buyerOrg.users[0].id,
+          id,
+          quotation.listing.scrapRecord.description || 'Scrap Material'
+        );
+      }
+    } catch (e) {
+      console.error('Error sending quotation accepted notification:', e);
+    }
+
+    return result;
   });
+
 };
 
 // Reject quotation (Industry action)
@@ -187,6 +288,23 @@ export const rejectQuotation = async (id, organisationId) => {
 
   if (result.count === 0) {
     throw new Error('Can only reject SUBMITTED quotations');
+  }
+
+  // Notify buyer that their quotation was rejected (fire-and-forget)
+  try {
+    const buyerOrg = await prisma.organisation.findUnique({
+      where: { id: quotation.buyerId },
+      include: { users: { take: 1 } }
+    });
+    if (buyerOrg?.users?.[0]?.id) {
+      await notifyQuotationRejected(
+        buyerOrg.users[0].id,
+        id,
+        quotation.listing.scrapRecord.description || 'Scrap Material'
+      );
+    }
+  } catch (e) {
+    console.error('Error sending quotation rejected notification:', e);
   }
 
   return prisma.quotation.findUnique({ where: { id } });

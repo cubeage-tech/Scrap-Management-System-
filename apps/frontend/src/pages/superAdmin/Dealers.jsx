@@ -289,7 +289,7 @@ const Dealers = () => {
         await updateDealerStatus(updated.id, { accountState: STATUS_TO_BACKEND[updated.status] });
       } catch (err) {
         console.error("Failed to update dealer status:", err);
-        alert(err.response?.data?.message || "Failed to update dealer status.");
+        showToast(err.response?.data?.message || "Failed to update dealer status.");
         return;
       }
     }
@@ -305,7 +305,7 @@ const Dealers = () => {
       fetchDealers();
     } catch (err) {
       console.error("Failed to update dealer status:", err);
-      alert(err.response?.data?.message || "Failed to update dealer status.");
+      showToast(err.response?.data?.message || "Failed to update dealer status.");
     }
   };
 
@@ -319,7 +319,7 @@ const Dealers = () => {
       fetchDealers();
     } catch (err) {
       console.error("Failed to update dealer status:", err);
-      alert(err.response?.data?.message || "Failed to update selected dealers.");
+      showToast(err.response?.data?.message || "Failed to update selected dealers.");
     }
   };
 
@@ -331,7 +331,7 @@ const Dealers = () => {
         : filteredDealers;
 
     if (exportData.length === 0) {
-      alert("No dealers to export.");
+      showToast("No dealers to export.");
       return;
     }
 

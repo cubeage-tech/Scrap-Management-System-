@@ -26,11 +26,12 @@ const getInitials = (name = "") => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const OnboardDealerModal = ({ isOpen, onClose, onAddDealer, nextDealerCode = "DLR-2211" }) => {
+const OnboardDealerModal = ({ isOpen, onClose, onAddDealer, nextDealerCode = "DLR-006" }) => {
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     code: nextDealerCode,
     name: "",
-    specialisation: "Ferrous & Non-Ferrous",
+    specialisation: "Metal Scrap",
     location: "",
     contactPerson: "",
     email: "",
@@ -45,8 +46,9 @@ const OnboardDealerModal = ({ isOpen, onClose, onAddDealer, nextDealerCode = "DL
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
     if (!formData.name || !formData.location || !formData.specialisation) {
-      alert("Please fill in company name, location, and specialisation.");
+      setError("Please fill in company name, location, and specialisation.");
       return;
     }
 
@@ -110,6 +112,11 @@ const OnboardDealerModal = ({ isOpen, onClose, onAddDealer, nextDealerCode = "DL
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
+              {error}
+            </div>
+          )}
           {/* Company Name & Dealer Code */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">

@@ -18,6 +18,10 @@ export const getAuctions = async (req, res) => {
       status: req.query.status,
       listingId: req.query.listingId
     };
+    // Industry users only see their own auctions; Dealers see all active ones
+    if (req.user?.role === 'INDUSTRY') {
+      filters.ownerId = req.user.organisationId;
+    }
     const auctions = await auctionService.getAuctions(filters);
     res.status(200).json({ success: true, data: auctions });
   } catch (error) {
@@ -64,5 +68,38 @@ export const placeBid = async (req, res) => {
     res.status(201).json({ success: true, data: bid, message: 'Bid placed successfully' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getMyBids = async (req, res) => {
+  try {
+    const organisationId = req.user.organisationId;
+    if (!organisationId) return res.status(403).json({ success: false, message: 'Forbidden' });
+
+    const bids = await auctionService.getMyBids(organisationId);
+    res.status(200).json({ success: true, data: bids });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getAuctionBids = async (req, res) => {
+  try {
+    const bids = await auctionService.getAuctionBids(req.params.id);
+    res.status(200).json({ success: true, data: bids });
+  } catch (error) {
+    res.status(error.statusCode || 404).json({ success: false, message: error.message });
+  }
+};
+
+export const cancelAuction = async (req, res) => {
+  try {
+    const organisationId = req.user.organisationId;
+    if (!organisationId) return res.status(403).json({ success: false, message: 'Forbidden' });
+
+    const result = await auctionService.cancelAuction(req.params.id, organisationId);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(error.statusCode || 400).json({ success: false, message: error.message });
   }
 };

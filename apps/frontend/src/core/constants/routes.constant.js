@@ -16,6 +16,7 @@ class RoutePath {
   static LOGIN = "/login";
   static SIGNUP = "/signup";
   static FORGOT_PASSWORD = "/forgot-password";
+  static RESET_PASSWORD = "/reset-password";
 
   // ======================================================
   // SUPER ADMIN
@@ -80,6 +81,10 @@ class RoutePath {
 
   static INDUSTRY_SETTINGS = `${this.INDUSTRY_BASE}/settings`;
 
+  static INDUSTRY_TENDERS = `${this.INDUSTRY_BASE}/tenders`;
+
+  static INDUSTRY_TENDER_DETAIL = `${this.INDUSTRY_BASE}/tenders/:id`;
+
   static INDUSTRY_ORDERS = `${this.INDUSTRY_BASE}/orders`;
 
   static INDUSTRY_TRANSPORT = `${this.INDUSTRY_BASE}/transport`;
@@ -107,6 +112,13 @@ class RoutePath {
   static DEALER_PURCHASED_SCRAP = `${this.DEALER_BASE}/purchased-scrap`;
 
   static DEALER_SCRAP_INVENTORY = `${this.DEALER_BASE}/scrap-inventory`;
+
+  static DEALER_TENDERS = `${this.DEALER_BASE}/tenders`;
+
+  static DEALER_TENDER_DETAIL = `${this.DEALER_BASE}/tenders/:id`;
+
+  static DEALER_TENDER_SUBMIT  = `${this.DEALER_BASE}/tenders/:id/submit`;
+  static DEALER_TENDER_AWARDS  = `${this.DEALER_BASE}/tender-awards`;
 
   static DEALER_ORDERS = `${this.DEALER_BASE}/orders`;
 

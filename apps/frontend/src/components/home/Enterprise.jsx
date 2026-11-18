@@ -1,4 +1,4 @@
-import { Lock, Zap, Globe, Award, ArrowRight } from "lucide-react";
+import { Lock, Zap, Globe, Award, ArrowRight, Leaf, Recycle } from "lucide-react";
 
 const enterpriseFeatures = [
   {
@@ -57,6 +57,27 @@ const Enterprise = () => {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* Sustainability Banner */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 md:p-10 flex flex-col lg:flex-row items-center justify-between gap-6 mb-6">
+          <div className="flex flex-col lg:flex-row items-center lg:items-start gap-5 text-center lg:text-left">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center shrink-0">
+              <Recycle className="w-7 h-7 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-emerald-700 font-bold text-sm tracking-wider mb-1 uppercase flex items-center gap-1.5 justify-center lg:justify-start">
+                <Leaf className="w-4 h-4" /> Sustainability First
+              </p>
+              <h3 className="text-xl font-bold text-foreground mb-2">
+                Every kilogram traded keeps scrap out of landfills
+              </h3>
+              <p className="text-gray-600 text-sm max-w-2xl">
+                SmartScrap AI routes industrial scrap back into the production cycle — reducing raw material extraction,
+                cutting emissions, and building a circular economy across India's manufacturing sector.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* AI Banner */}

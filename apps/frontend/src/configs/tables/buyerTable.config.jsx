@@ -22,7 +22,7 @@ export const buyerColumns = [
   { accessorKey: "seller", header: "SELLER" },
   {
     accessorKey: "quantityMT",
-    header: "QUANTITY (MT)",
+    header: "QUANTITY (Tons)",
     filterVariant: "range",
   },
   {

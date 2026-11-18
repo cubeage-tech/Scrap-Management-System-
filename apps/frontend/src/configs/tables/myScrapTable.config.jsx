@@ -92,7 +92,7 @@ export const myScrapColumns = [
   },
   {
     accessorKey: "expPriceMT",
-    header: "EXP. PRICE/MT",
+    header: "EXP. PRICE/Ton",
   },
   {
     accessorKey: "status",

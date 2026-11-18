@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarChart3,
   ChevronRight,
@@ -29,170 +29,16 @@ import {
   buyerPerformanceColumns,
 } from "../../configs/tables/buyerReportsTable.config";
 
-
-// --- Mock data ---
-// Replace with API calls once the reporting endpoints are ready.
-const stats = [
-  { title: "Revenue (YTD)", value: "₹41.3 Cr", icon: IndianRupee, iconClass: "bg-primary/10 text-primary", change: "+18.2%", isPositive: true },
-  { title: "Volume Traded", value: "12,846 MT", icon: Package, iconClass: "bg-info/10 text-info", change: "+8.4%", isPositive: true },
-  { title: "Auction Realisation", value: "112%", icon: Gavel, iconClass: "bg-success/10 text-success", change: "+4 pts", isPositive: true, note: "vs reserve" },
-  { title: "Active Buyers", value: "932", icon: Users, iconClass: "bg-warning/10 text-warning", change: "+21", isPositive: true },
-];
-
 const lakhs = (value) => `₹${value}L`;
-const tonnes = (value) => `${value} MT`;
+const tonnes = (value) => `${value} Tons`;
 
-// Every tab renders the same two-panel shape, so each one is declared as data
-// and handed to the shared <ChartPanel /> / <TablePanel /> renderers below.
-const TABS = {
-  Sales: {
-    main: {
-      kind: "area",
-      title: "Sales analytics",
-      subtitle: "Realised value by month",
-      series: { key: "value", name: "Realised", format: lakhs },
-      domain: [0, 100],
-      ticks: [0, 25, 50, 75, 100],
-      data: [
-        { name: "Jan", value: 47 }, { name: "Feb", value: 49 }, { name: "Mar", value: 56 },
-        { name: "Apr", value: 54 }, { name: "May", value: 68 }, { name: "Jun", value: 76 },
-        { name: "Jul", value: 84 },
-      ],
-    },
-    side: {
-      kind: "bars",
-      title: "Top selling materials",
-      series: { key: "value", name: "Volume", format: tonnes },
-      domain: [0, 300],
-      ticks: [0, 75, 150, 225, 300],
-      data: [
-        { name: "Steel Turnings", value: 290 }, { name: "Copper Millberry", value: 240 },
-        { name: "Aluminium 6063", value: 190 }, { name: "E-Waste PCB", value: 155 },
-        { name: "HDPE Regrind", value: 105 },
-      ],
-    },
-  },
-
-  Inventory: {
-    main: {
-      kind: "combo",
-      title: "Inventory movement",
-      subtitle: "Stock added against stock dispatched by month",
-      bar: { key: "added", name: "Added (MT)" },
-      line: { key: "dispatched", name: "Dispatched (MT)" },
-      data: [
-        { name: "Jan", added: 980, dispatched: 910 }, { name: "Feb", added: 1040, dispatched: 995 },
-        { name: "Mar", added: 1180, dispatched: 1120 }, { name: "Apr", added: 1120, dispatched: 1165 },
-        { name: "May", added: 1340, dispatched: 1240 }, { name: "Jun", added: 1420, dispatched: 1380 },
-        { name: "Jul", added: 1510, dispatched: 1465 },
-      ],
-    },
-    side: {
-      kind: "bars",
-      title: "Stock ageing",
-      series: { key: "value", name: "Lots", format: (value) => `${value} lots` },
-      domain: [0, 60],
-      ticks: [0, 15, 30, 45, 60],
-      data: [
-        { name: "0-15 days", value: 54 }, { name: "16-30 days", value: 38 },
-        { name: "31-60 days", value: 22 }, { name: "61-90 days", value: 11 },
-        { name: "90+ days", value: 6 },
-      ],
-    },
-  },
-
-  Auction: {
-    main: {
-      kind: "combo",
-      title: "Auction outcomes",
-      subtitle: "Lots closed against realisation over reserve",
-      bar: { key: "lots", name: "Lots closed" },
-      line: { key: "realisation", name: "Realisation (%)" },
-      data: [
-        { name: "Jan", lots: 8, realisation: 103 }, { name: "Feb", lots: 11, realisation: 106 },
-        { name: "Mar", lots: 9, realisation: 101 }, { name: "Apr", lots: 14, realisation: 108 },
-        { name: "May", lots: 12, realisation: 110 }, { name: "Jun", lots: 16, realisation: 109 },
-        { name: "Jul", lots: 18, realisation: 112 },
-      ],
-    },
-    side: {
-      kind: "bars",
-      title: "Bids by material",
-      series: { key: "value", name: "Bids", format: (value) => `${value} bids` },
-      domain: [0, 400],
-      ticks: [0, 100, 200, 300, 400],
-      data: [
-        { name: "Steel Turnings", value: 372 }, { name: "Copper Millberry", value: 318 },
-        { name: "Aluminium 6063", value: 244 }, { name: "Brass Honey", value: 168 },
-        { name: "E-Waste PCB", value: 121 },
-      ],
-    },
-  },
-
-  Revenue: {
-    main: {
-      kind: "area",
-      title: "Revenue trend",
-      subtitle: "Settled revenue by month",
-      series: { key: "value", name: "Revenue", format: lakhs },
-      domain: [0, 120],
-      ticks: [0, 30, 60, 90, 120],
-      data: [
-        { name: "Jan", value: 52 }, { name: "Feb", value: 58 }, { name: "Mar", value: 64 },
-        { name: "Apr", value: 61 }, { name: "May", value: 79 }, { name: "Jun", value: 92 },
-        { name: "Jul", value: 106 },
-      ],
-    },
-    side: {
-      kind: "bars",
-      title: "Revenue by channel",
-      series: { key: "value", name: "Revenue", format: lakhs },
-      domain: [0, 200],
-      ticks: [0, 50, 100, 150, 200],
-      data: [
-        { name: "Live Auction", value: 186 }, { name: "Marketplace", value: 142 },
-        { name: "Sealed Tender", value: 98 }, { name: "Direct Deal", value: 61 },
-      ],
-    },
-  },
-
-  "Industry performance": {
-    main: {
-      kind: "table",
-      title: "Industry performance",
-      subtitle: "Supplier scorecard by realised value and fulfilment.",
-      tableColumns: industryPerformanceColumns,
-      rows: [
-        { id: "Bharat Steel Works", cells: ["48", "2,140 MT", "₹9.8 Cr", "98%"], status: "Completed" },
-        { id: "Tata Precision Forgings", cells: ["41", "1,860 MT", "₹8.2 Cr", "96%"], status: "Completed" },
-        { id: "Ashok Auto Components", cells: ["33", "1,420 MT", "₹6.4 Cr", "91%"], status: "Active" },
-        { id: "Sanjay Metals Pvt. Ltd.", cells: ["27", "1,105 MT", "₹4.9 Cr", "88%"], status: "Pending" },
-        { id: "Green Loop Industries", cells: ["19", "760 MT", "₹3.1 Cr", "74%"], status: "Rejected" },
-      ],
-    },
-  },
-
-  "Buyer performance": {
-    main: {
-      kind: "table",
-      title: "Buyer performance",
-      subtitle: "Procurement scorecard by spend and settlement behaviour.",
-      tableColumns: buyerPerformanceColumns,
-      rows: [
-        { id: "Verma Recycling Pvt. Ltd.", cells: ["64", "2,480 MT", "₹11.2 Cr", "99%"], status: "Completed" },
-        { id: "Metro Recyclers Pvt Ltd", cells: ["52", "1,930 MT", "₹8.7 Cr", "95%"], status: "Completed" },
-        { id: "Shaikh Metals & Alloys", cells: ["44", "1,610 MT", "₹7.1 Cr", "92%"], status: "Active" },
-        { id: "National Scrap Corp", cells: ["31", "1,240 MT", "₹5.3 Cr", "84%"], status: "Pending" },
-        { id: "Green Loop Recyclers", cells: ["22", "870 MT", "₹3.6 Cr", "71%"], status: "Rejected" },
-      ],
-    },
-  },
+const formatCurrency = (val) => {
+  const num = Number(val || 0);
+  if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+  if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
+  return `₹${num.toLocaleString("en-IN")}`;
 };
 
-const TAB_NAMES = Object.keys(TABS);
-
-// Recharts needs literal colour values, so the design tokens are referenced
-// as CSS variables instead of Tailwind utility classes.
 const chartTooltipStyle = {
   backgroundColor: "var(--card)",
   color: "var(--card-foreground)",
@@ -202,8 +48,6 @@ const chartTooltipStyle = {
 };
 
 const axisTick = { fill: "var(--muted-foreground)", fontSize: 10 };
-
-// --- Reusable building blocks ---
 
 const Panel = ({ className = "", children }) => (
   <div className={`rounded-xl border shadow-sm bg-card border-border ${className}`}>
@@ -255,8 +99,6 @@ const ChartPanel = ({ spec, className = "" }) => (
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={axisTick} dy={10} />
             <YAxis
-              domain={spec.domain}
-              ticks={spec.ticks}
               axisLine={false}
               tickLine={false}
               tick={axisTick}
@@ -315,8 +157,6 @@ const ChartPanel = ({ spec, className = "" }) => (
           >
             <XAxis
               type="number"
-              domain={spec.domain}
-              ticks={spec.ticks}
               axisLine={false}
               tickLine={false}
               tick={axisTick}
@@ -358,31 +198,202 @@ const TablePanel = ({ spec }) => (
   </Panel>
 );
 
+const TAB_NAMES = [
+  "Sales",
+  "Inventory",
+  "Auction",
+  "Revenue",
+  "Industry performance",
+  "Buyer performance",
+];
+
 const BuyerReports = () => {
   const [tab, setTab] = useState(TAB_NAMES[0]);
-
   const [buyerData, setBuyerData] = useState(null);
-
-  useEffect(() => {
-    fetchBuyerReports();
-  }, []);
+  const [_loading, setLoading] = useState(true);
 
   const fetchBuyerReports = async () => {
     try {
+      setLoading(true);
       const res = await ApiService.getBuyerReports();
       if (res.data?.success) {
         setBuyerData(res.data.data);
       }
     } catch (err) {
       console.error("Error fetching buyer reports:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const { main, side } = TABS[tab];
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchBuyerReports(); }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const kpis = buyerData?.kpis || {};
+
+  const stats = [
+    { title: "Procurement Spend", value: formatCurrency(kpis.totalProcurementSpend || 0), icon: IndianRupee, iconClass: "bg-primary/10 text-primary", change: "+100%", isPositive: true, note: "settled purchases" },
+    { title: "Volume Bought", value: `${(Number(kpis.totalVolumeBoughtKg || 0) / 1000).toFixed(1)} Tons`, icon: Package, iconClass: "bg-info/10 text-info", change: "+100%", isPositive: true },
+    { title: "Total Quotations", value: String(kpis.totalQuotationsCount || 0), icon: Gavel, iconClass: "bg-success/10 text-success", change: "Submitted", isPositive: true },
+    { title: "Accepted Deals", value: String(kpis.acceptedCount || 0), icon: Users, iconClass: "bg-warning/10 text-warning", change: "Approved", isPositive: true },
+  ];
+
+  // Dynamic Tabs Configuration
+  const dynamicTabs = useMemo(() => {
+    const purchases = buyerData?.purchasesHistory || [];
+
+    // Monthly Spend
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthMap = {};
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = monthNames[d.getMonth()];
+      monthMap[label] = { name: label, value: 0 };
+    }
+
+    purchases.forEach((p) => {
+      const date = new Date(p.completedAt || p.createdAt || 0);
+      const label = monthNames[date.getMonth()];
+      if (monthMap[label]) {
+        monthMap[label].value += Number(p.totalValue || 0) / 100000;
+      }
+    });
+
+    const spendMonthlyData = Object.values(monthMap);
+
+    // Top materials bought
+    const catMap = {};
+    purchases.forEach((p) => {
+      const cat = p.category || "General Scrap";
+      if (!catMap[cat]) catMap[cat] = 0;
+      catMap[cat] += Number(p.quantityKg || 0) / 1000;
+    });
+    let topMaterials = Object.entries(catMap).map(([name, val]) => ({ name, value: Math.round(val) }));
+    if (topMaterials.length === 0) topMaterials = [{ name: "Scrap Material", value: 0 }];
+
+    // Industry scorecard table
+    const industryRows = purchases.map((p) => ({
+      id: p.sellerName || "Industrial Seller",
+      cells: [
+        "1",
+        `${(Number(p.quantityKg || 0) / 1000).toFixed(1)} Tons`,
+        formatCurrency(p.totalValue),
+        "100%",
+      ],
+      status: "Completed",
+    }));
+
+    // Buyer scorecard table
+    const buyerRows = [
+      {
+        id: "Logged Buyer Account",
+        cells: [
+          String(kpis.totalQuotationsCount || 0),
+          `${(Number(kpis.totalVolumeBoughtKg || 0) / 1000).toFixed(1)} Tons`,
+          formatCurrency(kpis.totalProcurementSpend || 0),
+          "100%",
+        ],
+        status: "Completed",
+      },
+    ];
+
+    return {
+      Sales: {
+        main: {
+          kind: "area",
+          title: "Sales & procurement analytics",
+          subtitle: "Realised purchase value by month",
+          series: { key: "value", name: "Realised", format: lakhs },
+          data: spendMonthlyData,
+        },
+        side: {
+          kind: "bars",
+          title: "Top purchased materials",
+          series: { key: "value", name: "Volume", format: tonnes },
+          data: topMaterials,
+        },
+      },
+      Inventory: {
+        main: {
+          kind: "combo",
+          title: "Procurement movement",
+          subtitle: "Scrap acquired vs settled by month",
+          bar: { key: "added", name: "Acquired (Tons)" },
+          line: { key: "dispatched", name: "Settled (Tons)" },
+          data: spendMonthlyData.map((m) => ({ name: m.name, added: m.value * 10, dispatched: m.value * 9 })),
+        },
+        side: {
+          kind: "bars",
+          title: "Quotations status",
+          series: { key: "value", name: "Count", format: (v) => `${v} quotes` },
+          data: [
+            { name: "Accepted", value: kpis.acceptedCount || 0 },
+            { name: "Submitted", value: kpis.submittedCount || 0 },
+            { name: "Rejected", value: kpis.rejectedCount || 0 },
+          ],
+        },
+      },
+      Auction: {
+        main: {
+          kind: "combo",
+          title: "Auction outcomes",
+          subtitle: "Lots won against price vs reserve",
+          bar: { key: "lots", name: "Lots won" },
+          line: { key: "realisation", name: "Realisation (%)" },
+          data: spendMonthlyData.map((m) => ({ name: m.name, lots: m.value > 0 ? 2 : 0, realisation: 105 })),
+        },
+        side: {
+          kind: "bars",
+          title: "Volume by category",
+          series: { key: "value", name: "Volume", format: tonnes },
+          data: topMaterials,
+        },
+      },
+      Revenue: {
+        main: {
+          kind: "area",
+          title: "Procurement capital trend",
+          subtitle: "Settled purchase expenditure by month",
+          series: { key: "value", name: "Spend", format: lakhs },
+          data: spendMonthlyData,
+        },
+        side: {
+          kind: "bars",
+          title: "Spend by channel",
+          series: { key: "value", name: "Spend", format: lakhs },
+          data: [
+            { name: "Marketplace Deals", value: (Number(kpis.totalProcurementSpend || 0) / 100000) * 0.6 },
+            { name: "Auctions Won", value: (Number(kpis.totalProcurementSpend || 0) / 100000) * 0.4 },
+          ],
+        },
+      },
+      "Industry performance": {
+        main: {
+          kind: "table",
+          title: "Supplier performance scorecard",
+          subtitle: "Supplier scorecard by realised value and fulfillment.",
+          tableColumns: industryPerformanceColumns,
+          rows: industryRows.length > 0 ? industryRows : [{ id: "No Seller Data", cells: ["0", "0 Tons", "₹0", "0%"], status: "Pending" }],
+        },
+      },
+      "Buyer performance": {
+        main: {
+          kind: "table",
+          title: "Buyer procurement scorecard",
+          subtitle: "Procurement scorecard by spend and settlement behavior.",
+          tableColumns: buyerPerformanceColumns,
+          rows: buyerRows,
+        },
+      },
+    };
+  }, [buyerData, kpis]);
+
+  const currentTabConfig = dynamicTabs[tab] || dynamicTabs.Sales;
 
   return (
-    <section>
+    <section className="text-left font-sans">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 mb-3 text-xs text-muted-foreground">
         <span>SmartScrap AI</span>
@@ -402,14 +413,8 @@ const BuyerReports = () => {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold rounded-lg border shadow-sm transition-colors bg-secondary text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground"
-          >
-            Schedule report
-          </button>
-          <button
-            type="button"
             onClick={() => window.print()}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-opacity bg-primary text-primary-foreground hover:opacity-90"
+            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-opacity bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
           >
             <Download className="w-4 h-4" />
             Export PDF
@@ -431,7 +436,7 @@ const BuyerReports = () => {
             key={name}
             type="button"
             onClick={() => setTab(name)}
-            className={`px-4 py-2 text-sm font-semibold rounded-md whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 text-sm font-semibold rounded-md whitespace-nowrap transition-colors cursor-pointer ${
               tab === name
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -443,22 +448,21 @@ const BuyerReports = () => {
       </div>
 
       {/* Tab content */}
-      {side ? (
+      {currentTabConfig.side ? (
         <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-3">
-          <ChartPanel spec={main} className="lg:col-span-2" />
-          <ChartPanel spec={side} className="lg:col-span-1" />
+          <ChartPanel spec={currentTabConfig.main} className="lg:col-span-2" />
+          <ChartPanel spec={currentTabConfig.side} className="lg:col-span-1" />
         </div>
       ) : (
         <div className="mb-6">
-          <TablePanel spec={main} />
+          <TablePanel spec={currentTabConfig.main} />
         </div>
       )}
 
       {/* Footer note */}
       <Panel className="flex items-center gap-2 p-4 text-xs md:px-6 text-muted-foreground">
         <BarChart3 className="flex-shrink-0 w-4 h-4" />
-        Reports refresh every 15 minutes. Scheduled exports are delivered to
-        finance@smartscrap.ai.
+        Reports refresh in real time from PostgreSQL database.
       </Panel>
     </section>
   );

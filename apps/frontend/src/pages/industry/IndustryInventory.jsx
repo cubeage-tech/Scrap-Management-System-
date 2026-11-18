@@ -9,12 +9,12 @@ import ScrapFormModal from "../../components/industry/inventory/ScrapFormModal";
 import ScrapViewModal from "../../components/industry/inventory/ScrapViewModal";
 
 const LOGS = [
-  { id: "LOG-9021", date: "2026-08-18 14:15", material: "Copper Scrap (Millberry)", type: "Inward", qty: "+ 4.2 MT", ref: "PO-88219", operator: "Ramesh Sharma", status: "Verified", badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  { id: "LOG-9020", date: "2026-08-18 11:30", material: "Steel Turnings", type: "Outward", qty: "- 12.0 MT", ref: "SO-44012", operator: "Vikram Singh", status: "Dispatched", badgeClass: "bg-amber-50 text-amber-700 border-amber-200" },
-  { id: "LOG-9019", date: "2026-08-17 16:45", material: "Aluminium Extrusion 6063", type: "Inward", qty: "+ 8.5 MT", ref: "PO-88204", operator: "Sanjay Patel", status: "Verified", badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  { id: "LOG-9018", date: "2026-08-17 09:10", material: "HDPE Plastic Regrind", type: "Adjustment", qty: "- 1.5 MT", ref: "AUDIT-102", operator: "Priya Nair", status: "Approved", badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200" },
-  { id: "LOG-9017", date: "2026-08-16 15:20", material: "Rubber Tyre Scrap", type: "Inward", qty: "+ 15.0 MT", ref: "PO-88190", operator: "Amit Kumar", status: "Verified", badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  { id: "LOG-9016", date: "2026-08-16 10:05", material: "Brass Honey Scrap", type: "Outward", qty: "- 3.2 MT", ref: "SO-43998", operator: "Deepak Verma", status: "Dispatched", badgeClass: "bg-amber-50 text-amber-700 border-amber-200" },
+  { id: "LOG-9021", date: "2026-08-18 14:15", material: "Copper Scrap (Millberry)", type: "Inward", qty: "+ 4.2 Tons", ref: "PO-88219", operator: "Ramesh Sharma", status: "Verified", badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  { id: "LOG-9020", date: "2026-08-18 11:30", material: "Steel Turnings", type: "Outward", qty: "- 12.0 Tons", ref: "SO-44012", operator: "Vikram Singh", status: "Dispatched", badgeClass: "bg-amber-50 text-amber-700 border-amber-200" },
+  { id: "LOG-9019", date: "2026-08-17 16:45", material: "Aluminium Extrusion 6063", type: "Inward", qty: "+ 8.5 Tons", ref: "PO-88204", operator: "Sanjay Patel", status: "Verified", badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  { id: "LOG-9018", date: "2026-08-17 09:10", material: "HDPE Plastic Regrind", type: "Adjustment", qty: "- 1.5 Tons", ref: "AUDIT-102", operator: "Priya Nair", status: "Approved", badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200" },
+  { id: "LOG-9017", date: "2026-08-16 15:20", material: "Rubber Tyre Scrap", type: "Inward", qty: "+ 15.0 Tons", ref: "PO-88190", operator: "Amit Kumar", status: "Verified", badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  { id: "LOG-9016", date: "2026-08-16 10:05", material: "Brass Honey Scrap", type: "Outward", qty: "- 3.2 Tons", ref: "SO-43998", operator: "Deepak Verma", status: "Dispatched", badgeClass: "bg-amber-50 text-amber-700 border-amber-200" },
 ];
 
 const MOVEMENTS = [
@@ -25,20 +25,20 @@ const MOVEMENTS = [
 ];
 
 const WAREHOUSES = [
-  { id: "WH-01", name: "Pune - Unit 2", manager: "Rajesh Patil", location: "Pune, Maharashtra", totalCap: "500 MT", occupiedCap: "410 MT", utilization: 82, materialsCount: 16 },
-  { id: "WH-02", name: "Jamshedpur - Yard A", manager: "Sunil Tudu", location: "Jamshedpur, Jharkhand", totalCap: "800 MT", occupiedCap: "640 MT", utilization: 80, materialsCount: 24 },
-  { id: "WH-03", name: "Chennai - Plant 1", manager: "S. Ramanathan", location: "Chennai, Tamil Nadu", totalCap: "450 MT", occupiedCap: "315 MT", utilization: 70, materialsCount: 12 },
-  { id: "WH-04", name: "Surat - Warehouse B", manager: "Chirag Shah", location: "Surat, Gujarat", totalCap: "350 MT", occupiedCap: "245 MT", utilization: 70, materialsCount: 18 },
-  { id: "WH-05", name: "Rajkot - Store 3", manager: "Bhavik Solanki", location: "Rajkot, Gujarat", totalCap: "250 MT", occupiedCap: "140 MT", utilization: 56, materialsCount: 9 },
-  { id: "WH-06", name: "Bengaluru - Hub", manager: "Anand Murthy", location: "Bengaluru, Karnataka", totalCap: "300 MT", occupiedCap: "180 MT", utilization: 60, materialsCount: 14 },
+  { id: "WH-01", name: "Pune - Unit 2", manager: "Rajesh Patil", location: "Pune, Maharashtra", totalCap: "500 Tons", occupiedCap: "410 Tons", utilization: 82, materialsCount: 16 },
+  { id: "WH-02", name: "Jamshedpur - Yard A", manager: "Sunil Tudu", location: "Jamshedpur, Jharkhand", totalCap: "800 Tons", occupiedCap: "640 Tons", utilization: 80, materialsCount: 24 },
+  { id: "WH-03", name: "Chennai - Plant 1", manager: "S. Ramanathan", location: "Chennai, Tamil Nadu", totalCap: "450 Tons", occupiedCap: "315 Tons", utilization: 70, materialsCount: 12 },
+  { id: "WH-04", name: "Surat - Warehouse B", manager: "Chirag Shah", location: "Surat, Gujarat", totalCap: "350 Tons", occupiedCap: "245 Tons", utilization: 70, materialsCount: 18 },
+  { id: "WH-05", name: "Rajkot - Store 3", manager: "Bhavik Solanki", location: "Rajkot, Gujarat", totalCap: "250 Tons", occupiedCap: "140 Tons", utilization: 56, materialsCount: 9 },
+  { id: "WH-06", name: "Bengaluru - Hub", manager: "Anand Murthy", location: "Bengaluru, Karnataka", totalCap: "300 Tons", occupiedCap: "180 Tons", utilization: 60, materialsCount: 14 },
 ];
 
 const CATEGORIES = [
-  { name: "Ferrous", pct: 38, weight: "232.5 MT", color: "#2563EB", strokeDash: "91 148", offset: "0" },
-  { name: "Non-Ferrous", pct: 26, weight: "159.1 MT", color: "#10B981", strokeDash: "62 177", offset: "-91" },
-  { name: "Polymers", pct: 16, weight: "97.9 MT", color: "#F59E0B", strokeDash: "38 201", offset: "-153" },
-  { name: "E-Waste", pct: 11, weight: "67.3 MT", color: "#EF4444", strokeDash: "26 213", offset: "-191" },
-  { name: "Paper", pct: 9, weight: "55.2 MT", color: "#6366F1", strokeDash: "22 217", offset: "-217" },
+  { name: "Ferrous", pct: 38, weight: "232.5 Tons", color: "#2563EB", strokeDash: "91 148", offset: "0" },
+  { name: "Non-Ferrous", pct: 26, weight: "159.1 Tons", color: "#10B981", strokeDash: "62 177", offset: "-91" },
+  { name: "Polymers", pct: 16, weight: "97.9 Tons", color: "#F59E0B", strokeDash: "38 201", offset: "-153" },
+  { name: "E-Waste", pct: 11, weight: "67.3 Tons", color: "#EF4444", strokeDash: "26 213", offset: "-191" },
+  { name: "Paper", pct: 9, weight: "55.2 Tons", color: "#6366F1", strokeDash: "22 217", offset: "-217" },
 ];
 
 const IndustryInventory = () => {
@@ -98,7 +98,7 @@ const IndustryInventory = () => {
     fetchScraps();
   };
 
-  const donutInfo = hoverCat || { name: "Total Stock", weight: "612 MT", pct: 100 };
+  const donutInfo = hoverCat || { name: "Total Stock", weight: "612 Tons", pct: 100 };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 p-3 sm:p-5 lg:p-8 space-y-5 font-sans">
@@ -123,9 +123,9 @@ const IndustryInventory = () => {
       {/* Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { l: "Total Stock", v: "1,325 MT", c: "+4.8%", bg: "bg-blue-50 text-blue-600", i: "📦" },
-          { l: "Inward (30d)", v: "612 MT", c: "+8.1%", bg: "bg-emerald-50 text-emerald-600", i: "↙" },
-          { l: "Outward (30d)", v: "548 MT", c: "+5.2%", bg: "bg-amber-50 text-amber-600", i: "↗" },
+          { l: "Total Stock", v: "1,325 Tons", c: "+4.8%", bg: "bg-blue-50 text-blue-600", i: "📦" },
+          { l: "Inward (30d)", v: "612 Tons", c: "+8.1%", bg: "bg-emerald-50 text-emerald-600", i: "↙" },
+          { l: "Outward (30d)", v: "548 Tons", c: "+5.2%", bg: "bg-amber-50 text-amber-600", i: "↗" },
           { l: "Warehouse Utilisation", v: "72%", c: "+3 pts", bg: "bg-sky-50 text-sky-600", i: "🏢" }
         ].map((m) => (
           <div key={m.l} className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -187,8 +187,8 @@ const IndustryInventory = () => {
               {[{ d: "Mon", i: 45, o: 30 }, { d: "Tue", i: 62, o: 48 }, { d: "Wed", i: 85, o: 52 }, { d: "Thu", i: 40, o: 65 }, { d: "Fri", i: 95, o: 70 }, { d: "Sat", i: 75, o: 50 }, { d: "Sun", i: 30, o: 20 }].map((g) => (
                 <div key={g.d} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                   <div className="flex items-end gap-1 h-28">
-                    <div className="w-3 bg-indigo-600 rounded-t" style={{ height: `${g.i}%` }} title={`Inward: ${g.i} MT`} />
-                    <div className="w-3 bg-amber-500 rounded-t" style={{ height: `${g.o}%` }} title={`Outward: ${g.o} MT`} />
+                    <div className="w-3 bg-indigo-600 rounded-t" style={{ height: `${g.i}%` }} title={`Inward: ${g.i} Tons`} />
+                    <div className="w-3 bg-amber-500 rounded-t" style={{ height: `${g.o}%` }} title={`Outward: ${g.o} Tons`} />
                   </div>
                   <span className="text-[10px] text-slate-500">{g.d}</span>
                 </div>
@@ -256,7 +256,7 @@ const IndustryInventory = () => {
                 {[{ m: "Feb", v: 310 }, { m: "Mar", v: 410 }, { m: "Apr", v: 390 }, { m: "May", v: 460 }, { m: "Jun", v: 510 }, { m: "Jul", v: 580 }].map((b) => (
                   <div key={b.m} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
                     <div className="w-5 bg-blue-600 rounded-t transition-all group-hover:bg-blue-700 relative" style={{ height: `${(b.v / 600) * 100}%` }}>
-                      <span className="opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1 py-0.5 rounded whitespace-nowrap">{b.v} MT</span>
+                      <span className="opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1 py-0.5 rounded whitespace-nowrap">{b.v} Tons</span>
                     </div>
                     <span className="text-[10px] text-slate-500">{b.m}</span>
                   </div>

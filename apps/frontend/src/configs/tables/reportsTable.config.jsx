@@ -10,12 +10,12 @@ export const inventoryReportColumns = [
   {
     accessorKey: "stock",
     header: "CURRENT STOCK",
-    Cell: ({ cell }) => `${cell.getValue().toLocaleString()} MT`,
+    Cell: ({ cell }) => `${cell.getValue().toLocaleString()} Tons`,
   },
   {
     accessorKey: "capacity",
     header: "CAPACITY",
-    Cell: ({ cell }) => `${cell.getValue().toLocaleString()} MT`,
+    Cell: ({ cell }) => `${cell.getValue().toLocaleString()} Tons`,
   },
   {
     accessorKey: "turnaround",
@@ -61,7 +61,7 @@ export const industryPerformanceColumns = [
   {
     accessorKey: "volume",
     header: "VOLUME DISPATCHED",
-    Cell: ({ cell }) => `${cell.getValue().toLocaleString()} MT`,
+    Cell: ({ cell }) => `${cell.getValue().toLocaleString()} Tons`,
   },
   { accessorKey: "value", header: "GROSS REALIZED VALUE" },
   {

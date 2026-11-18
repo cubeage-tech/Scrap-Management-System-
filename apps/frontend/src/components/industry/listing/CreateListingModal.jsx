@@ -45,7 +45,11 @@ const CreateListingModal = ({ isOpen, mode = "create", listing, onClose, onSucce
               sellingMode: listing.sellingMode,
               quantityKg: listing.quantityKg ?? "",
               expectedPricePerKg: listing.expectedPricePerKg ?? "",
-              closesAt: listing.closesAt ? listing.closesAt.slice(0, 10) : "",
+              closesAt: listing.closesAt
+                ? listing.sellingMode === "TENDER"
+                  ? listing.closesAt.slice(0, 16)
+                  : listing.closesAt.slice(0, 10)
+                : "",
             }
           : EMPTY_FORM
       );
@@ -255,19 +259,26 @@ const CreateListingModal = ({ isOpen, mode = "create", listing, onClose, onSucce
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField
-              label="Expected Price / Kg (₹)"
+              label={formData.sellingMode === "TENDER" ? "Reserve Price / Kg (₹) — minimum" : "Expected Price / Kg (₹)"}
               type="number"
               placeholder="e.g. 45"
               value={formData.expectedPricePerKg}
               onChange={setField("expectedPricePerKg")}
             />
             <FormField
-              label="Closes At"
-              type="date"
+              label={formData.sellingMode === "TENDER" ? "Submission Deadline *" : "Closes At"}
+              type={formData.sellingMode === "TENDER" ? "datetime-local" : "date"}
+              required={formData.sellingMode === "TENDER"}
               value={formData.closesAt}
               onChange={setField("closesAt")}
             />
           </div>
+
+          {formData.sellingMode === "TENDER" && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+              <strong>Sealed tender:</strong> Dealers submit confidential offers before the deadline. All offers are revealed simultaneously after closing. You then select the winning offer.
+            </div>
+          )}
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
             <button
@@ -284,7 +295,13 @@ const CreateListingModal = ({ isOpen, mode = "create", listing, onClose, onSucce
               }
               className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors cursor-pointer"
             >
-              {submitting ? "Saving..." : isEdit ? "Save Changes" : "Create Listing"}
+              {submitting
+              ? "Saving..."
+              : isEdit
+              ? "Save Changes"
+              : formData.sellingMode === "TENDER"
+              ? "Create Tender"
+              : "Create Listing"}
             </button>
           </div>
         </form>

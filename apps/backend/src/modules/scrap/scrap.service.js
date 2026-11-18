@@ -97,6 +97,65 @@ export const updateScrap = async (id, data, organisationId) => {
   });
 };
 
+export const addScrapImages = async (scrapId, organisationId, files, baseUrl) => {
+  const scrap = await prisma.scrapRecord.findFirst({
+    where: { id: scrapId, ownerId: organisationId }
+  });
+  if (!scrap) throw notFoundError();
+
+  const existing = await prisma.scrapImage.count({ where: { scrapRecordId: scrapId } });
+  if (existing + files.length > 5) {
+    const err = new Error(`Cannot upload more than 5 images per scrap record (already has ${existing})`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const images = await prisma.$transaction(
+    files.map((file, i) =>
+      prisma.scrapImage.create({
+        data: {
+          scrapRecordId: scrapId,
+          url: `${baseUrl}/uploads/scrap-images/${file.filename}`,
+          sortOrder: existing + i,
+        },
+      })
+    )
+  );
+
+  return images;
+};
+
+export const deleteScrapImage = async (scrapId, imageId, organisationId) => {
+  const scrap = await prisma.scrapRecord.findFirst({
+    where: { id: scrapId, ownerId: organisationId }
+  });
+  if (!scrap) throw notFoundError();
+
+  const image = await prisma.scrapImage.findFirst({ where: { id: imageId, scrapRecordId: scrapId } });
+  if (!image) {
+    const err = new Error('Image not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await prisma.scrapImage.delete({ where: { id: imageId } });
+
+  // Remove file from disk
+  try {
+    const filename = image.url.split('/uploads/scrap-images/').pop();
+    if (filename) {
+      const { default: fs } = await import('fs');
+      const { default: path } = await import('path');
+      const { fileURLToPath } = await import('url');
+      const __dirname = path.dirname(fileURLToPath(import.meta.url));
+      const filePath = path.join(__dirname, '..', '..', '..', 'uploads', 'scrap-images', filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+  } catch (_) {
+    // file deletion is best-effort
+  }
+};
+
 export const deleteScrap = async (id, organisationId) => {
   const result = await prisma.scrapRecord.deleteMany({
     where: { id, ownerId: organisationId }
@@ -128,6 +187,12 @@ export const convertSaleToInventory = async (saleId, organisationId, userId) => 
   if (sale.buyerId !== organisationId) {
     const err = new Error('Unauthorized to convert this sale to inventory');
     err.statusCode = 403;
+    throw err;
+  }
+
+  if (sale.status !== 'COMPLETED') {
+    const err = new Error('Sale must be COMPLETED before converting to inventory');
+    err.statusCode = 400;
     throw err;
   }
 

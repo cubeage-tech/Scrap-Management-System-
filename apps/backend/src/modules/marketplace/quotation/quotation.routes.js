@@ -9,7 +9,7 @@ const router = express.Router();
 // All quotation routes require authentication
 router.use(requireAuth);
 
-// 1. Create Quotation (buyer-side action)
+// 1. Create Quotation — INDUSTRY excluded: cannot bid on listings they own
 router.post('/', allowRoles('DEALER', 'BUYER'), validateCreateQuotation, quotationController.createQuotation);
 
 // 2. Get Quotations

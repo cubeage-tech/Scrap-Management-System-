@@ -1,4 +1,4 @@
-import React from 'react'
+// Setting page
 
 const Setting = () => {
   return (

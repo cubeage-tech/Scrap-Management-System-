@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Upload, Save, CheckCircle2, Box, Info } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Upload, Save, CheckCircle2, Info } from "lucide-react";
 import ApiService from "../../core/services/api.service";
 
 const AddScrapModal = ({
@@ -13,78 +13,75 @@ const AddScrapModal = ({
   const [categories, setCategories] = useState(propCategories);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   const [formData, setFormData] = useState({
     material: "",
     category: "",
     categoryId: "",
     weight: "",
-    unit: "MT", // "MT" or "kg"
+    unit: "Tons",
     condition: "Grade A",
     location: "",
-    expPriceMT: "",
-    imageUrl: ""
   });
-
-  // Fetch categories if not passed via props
-  useEffect(() => {
-    if (propCategories && propCategories.length > 0) {
-      setCategories(propCategories);
-      if (!formData.categoryId && propCategories[0]) {
-        setFormData((prev) => ({
-          ...prev,
-          category: propCategories[0].name,
-          categoryId: propCategories[0].id
-        }));
-      }
-    } else {
-      fetchCategories();
-    }
-  }, [propCategories, isOpen]);
 
   const fetchCategories = async () => {
     try {
       const res = await ApiService.getCategories();
-      if (res?.data?.success && res.data.data) {
+      if (res?.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         const fetchedCats = res.data.data;
         setCategories(fetchedCats);
-        if (fetchedCats.length > 0 && !formData.categoryId) {
-          setFormData((prev) => ({
-            ...prev,
-            category: fetchedCats[0].name,
-            categoryId: fetchedCats[0].id
-          }));
-        }
+        setFormData((prev) => ({
+          ...prev,
+          category: prev.category || fetchedCats[0].name,
+          categoryId: prev.categoryId || fetchedCats[0].id
+        }));
       }
     } catch (err) {
       console.error("Failed to load categories in AddScrapModal:", err);
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (isOpen) fetchCategories(); }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleCategoryChange = (e) => {
-    const selectedVal = e.target.value;
-    const catObj = categories.find(
-      (c) => c.id === selectedVal || c.name.toLowerCase() === selectedVal.toLowerCase()
-    );
+    const selectedId = e.target.value;
+    const catObj = categories.find((c) => c.id === selectedId);
     setFormData((prev) => ({
       ...prev,
-      categoryId: catObj?.id || selectedVal,
-      category: catObj?.name || selectedVal
+      categoryId: selectedId,
+      category: catObj ? catObj.name : ""
     }));
   };
 
-
   const handleImageFileChange = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const total = selectedFiles.length + files.length;
+    if (total > 5) {
+      setFormError(`You can attach up to 5 images. You already have ${selectedFiles.length}.`);
+      return;
+    }
+
+    setSelectedFiles((prev) => [...prev, ...files]);
+
+    files.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        setFormData((prev) => ({ ...prev, imageUrl: reader.result }));
+      reader.onload = (ev) => {
+        setImagePreviews((prev) => [...prev, { name: file.name, src: ev.target.result }]);
       };
       reader.readAsDataURL(file);
-    }
+    });
+  };
+
+  const removeImage = (idx) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e) => {
@@ -100,14 +97,24 @@ const AddScrapModal = ({
       return;
     }
 
+    let finalCategoryId = formData.categoryId;
+    if (!finalCategoryId && categories.length > 0) {
+      finalCategoryId = categories[0].id;
+    }
+
+    if (!finalCategoryId) {
+      setFormError("Please select a valid category from the dropdown.");
+      return;
+    }
+
     const rawQtyInput = parseFloat(formData.weight) || 0;
-    const rawWeightKg = formData.unit === "MT" ? rawQtyInput * 1000 : rawQtyInput;
+    const rawWeightKg = formData.unit === "Tons" ? rawQtyInput * 1000 : rawQtyInput;
 
     setIsSubmitting(true);
 
     try {
       const payload = {
-        categoryId: formData.categoryId || (categories[0]?.id || undefined),
+        categoryId: finalCategoryId,
         description: formData.material.trim(),
         totalQuantityKg: rawWeightKg,
         condition: formData.condition || "Grade A",
@@ -117,16 +124,32 @@ const AddScrapModal = ({
       const res = await ApiService.createScrap(payload);
 
       if (res?.data?.success) {
-        if (onSuccess) {
-          onSuccess(res.data.data);
+        const newScrap = res.data.data;
+
+        // Upload images if any were selected
+        if (selectedFiles.length > 0) {
+          try {
+            const fd = new FormData();
+            selectedFiles.forEach((f) => fd.append("images", f));
+            await ApiService.uploadScrapImages(newScrap.id, fd);
+          } catch (_) {
+            // image upload failure is non-blocking; scrap was created
+          }
         }
+
+        if (onSuccess) onSuccess(newScrap);
         onClose();
       } else {
         setFormError(res?.data?.message || "Failed to create scrap inventory record.");
       }
     } catch (err) {
       console.error("Error submitting scrap record:", err);
-      setFormError(err?.response?.data?.message || "Failed to save scrap. Please try again.");
+      const backendErrors = err?.response?.data?.errors;
+      if (backendErrors && backendErrors.length > 0) {
+        setFormError(backendErrors[0].message);
+      } else {
+        setFormError(err?.response?.data?.message || "Failed to save scrap. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -194,29 +217,20 @@ const AddScrapModal = ({
                 Scrap Category *
               </label>
               <select
-                value={formData.categoryId || formData.category}
+                value={formData.categoryId}
                 onChange={handleCategoryChange}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer"
               >
-                {/* Standard categories */}
-                {["Steel", "Copper", "Aluminium", "Plastic", "Electronic Waste", "Rubber", "Paper", "Textile", "Ferrous", "Non-Ferrous", "Machinery"].map((catName) => {
-                  const dbMatch = categories?.find((c) => c.name.toLowerCase() === catName.toLowerCase());
-                  return (
-                    <option key={catName} value={dbMatch ? dbMatch.id : catName}>
-                      {catName}
+                {categories && categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
-                  );
-                })}
-                {/* Any additional custom database categories */}
-                {categories?.filter((cat) => 
-                  !["steel", "copper", "aluminium", "plastic", "electronic waste", "rubber", "paper", "textile", "ferrous", "non-ferrous", "machinery"].includes(cat.name.toLowerCase())
-                ).map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
+                  ))
+                ) : (
+                  <option value="">Loading database categories...</option>
+                )}
               </select>
-
             </div>
 
             {/* Material Name */}
@@ -261,8 +275,8 @@ const AddScrapModal = ({
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer"
                 >
-                  <option value="MT">MT (Metric Ton)</option>
                   <option value="kg">kg (Kilogram)</option>
+                  <option value="Tons">Tons</option>
                 </select>
               </div>
             </div>
@@ -301,41 +315,62 @@ const AddScrapModal = ({
               </div>
             </div>
 
-            {/* Image Attachment (Optional) */}
+            {/* Image Attachment (Optional, up to 5) */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Scrap Photo (Optional)
+                Scrap Photos — Optional ({selectedFiles.length}/5)
               </label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageFileChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-                {formData.imageUrl ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <img
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                    />
-                    <span className="text-xs font-medium text-emerald-600 flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4" /> Photo Attached
-                    </span>
-                  </div>
-                ) : (
+
+              {/* Previews */}
+              {imagePreviews.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {imagePreviews.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={img.src}
+                        alt={img.name}
+                        className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        title="Remove"
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedFiles.length < 5 && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageFileChange}
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                  />
                   <div className="flex flex-col items-center gap-1.5 text-slate-500">
                     <Upload className="w-5 h-5 text-slate-400" />
-                    <span className="text-xs font-medium">Click to upload photo</span>
-                    <span className="text-[10px] text-slate-400">PNG, JPG up to 5MB</span>
+                    <span className="text-xs font-medium">
+                      {selectedFiles.length === 0 ? "Click to upload photos" : "Add more photos"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">JPG, PNG, WebP · max 5MB each · up to 5 photos</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {selectedFiles.length > 0 && (
+                <p className="mt-1.5 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {selectedFiles.length} photo{selectedFiles.length > 1 ? "s" : ""} ready to upload
+                </p>
+              )}
             </div>
           </div>
 
@@ -366,4 +401,3 @@ const AddScrapModal = ({
 };
 
 export default AddScrapModal;
-

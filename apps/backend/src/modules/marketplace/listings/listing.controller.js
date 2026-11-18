@@ -5,6 +5,7 @@ import {
   updateListingService,
   publishListingService,
   cancelListingService,
+  getListingBidsService,
 } from "./listing.service.js";
 
 export const createListing = async (req, res) => {
@@ -49,6 +50,7 @@ export const getListings = async (req, res) => {
       sellingMode,
       categoryId,
       mine,
+      ownerBusinessType,
       page,
       limit,
     } = req.query;
@@ -60,11 +62,18 @@ export const getListings = async (req, res) => {
       });
     }
 
+    const VALID_BUSINESS_TYPES = ["INDUSTRY", "DEALER", "BUYER"];
+    const resolvedOwnerBusinessType =
+      ownerBusinessType && VALID_BUSINESS_TYPES.includes(ownerBusinessType.toUpperCase())
+        ? ownerBusinessType.toUpperCase()
+        : undefined;
+
     const result = await getListingsService({
       status,
       sellingMode,
       categoryId,
       ownerId: mine === "true" ? req.user.organisationId : undefined,
+      ownerBusinessType: resolvedOwnerBusinessType,
       page,
       limit,
     });
@@ -162,3 +171,17 @@ export const cancelListing = async (req, res) => {
     });
   }
 };
+
+export const getListingBids = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await getListingBidsService(id);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return res.status(error.statusCode || 404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

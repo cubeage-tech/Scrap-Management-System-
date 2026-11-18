@@ -1,341 +1,269 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ShoppingBag,
   TrendingUp,
   DollarSign,
-  Download,
-  RefreshCw,
   Package,
+  RefreshCw,
   CheckCircle2,
-  Clock
+  Clock,
+  XCircle,
+  Loader2,
+  Building2,
+  AlertCircle,
 } from "lucide-react";
-import MaterialTable from "../../components/common/MaterialTable";
 import ApiService from "../../core/services/api.service";
-import { salesTableConfig } from "../../configs/tables/salesTable.config";
+import Toast from "../../components/common/Toast";
 
-const formatCurrency = (val) => "₹" + Number(val || 0).toLocaleString("en-IN");
+const fmt = (v) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v || 0);
 
-const Orders = () => {
-  const [activeTab, setActiveTab] = useState("procurement"); // "procurement" | "sales"
-  const [ordersList, setOrdersList] = useState([]);
-  const [kpis, setKpis] = useState({
-    totalProcurementCost: 0,
-    totalSalesRevenue: 0,
-    grossProfit: 0,
-    currentStockKg: 0,
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
+const STATUS_STYLE = {
+  COMPLETED:       { bg: "bg-green-50",  text: "text-green-700",  label: "Completed",       icon: CheckCircle2 },
+  PENDING_PAYMENT: { bg: "bg-yellow-50", text: "text-yellow-700", label: "Pending Payment", icon: Clock },
+  PAYMENT_PROCESSING: { bg: "bg-blue-50", text: "text-blue-700",  label: "Processing",      icon: Clock },
+  OFFER_ACCEPTED:  { bg: "bg-indigo-50", text: "text-indigo-700", label: "Accepted",        icon: CheckCircle2 },
+  CANCELLED:       { bg: "bg-red-50",    text: "text-red-700",    label: "Cancelled",       icon: XCircle },
+  REFUNDED:        { bg: "bg-gray-50",   text: "text-gray-600",   label: "Refunded",        icon: XCircle },
+};
 
-  useEffect(() => {
-    fetchOrdersData();
-  }, []);
-
-  const fetchOrdersData = async () => {
-    setIsLoading(true);
-    try {
-      const res = await ApiService.get("/reports/dealer");
-      if (res?.data?.success && res.data.data) {
-        const report = res.data.data;
-        if (report.kpis) {
-          setKpis(report.kpis);
-        }
-
-        if (activeTab === "procurement" && report.purchases) {
-          const mapped = report.purchases.map((p, idx) => ({
-            id: p.id,
-            orderId: `PROC-${p.id.slice(0, 6).toUpperCase()}`,
-            buyerName: p.sellerName || "Industrial Scrap Supplier",
-            location: "Factory Warehouse",
-            material: "Scrap Lot",
-            category: "Industrial",
-            quantity: `${(Number(p.quantityKg || 0) / 1000).toFixed(1)} MT`,
-            totalValue: formatCurrency(p.totalValue),
-            rawTotal: Number(p.totalValue || 0),
-            paymentStatus: "Paid",
-            fulfillmentStatus: "Completed",
-            date: new Date(p.createdAt || Date.now()).toLocaleDateString("en-IN", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-          }));
-          setOrdersList(mapped);
-        } else if (activeTab === "sales" && report.sales) {
-          const mapped = report.sales.map((s, idx) => ({
-            id: s.id,
-            orderId: `SALE-${s.id.slice(0, 6).toUpperCase()}`,
-            buyerName: s.buyerName || "Scrap Buyer / Factory",
-            location: "Recycling Hub",
-            material: "Processed Scrap",
-            category: "Processed",
-            quantity: `${(Number(s.quantityKg || 0) / 1000).toFixed(1)} MT`,
-            totalValue: formatCurrency(s.totalValue),
-            rawTotal: Number(s.totalValue || 0),
-            paymentStatus: idx % 2 === 0 ? "Paid" : "Processing",
-            fulfillmentStatus: "InTransit",
-            date: new Date(s.createdAt || Date.now()).toLocaleDateString("en-IN", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-          }));
-          setOrdersList(mapped);
-        } else {
-          setFallbackData();
-        }
-      } else {
-        setFallbackData();
-      }
-    } catch (err) {
-      console.error("Error fetching dealer orders:", err);
-      setFallbackData();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const setFallbackData = () => {
-    if (activeTab === "procurement") {
-      setOrdersList([
-        {
-          id: "P-201",
-          orderId: "PROC-8812",
-          buyerName: "Bharat Forge Plants",
-          location: "Pune Unit 1",
-          material: "Steel Turnings & Scrap",
-          category: "Steel",
-          quantity: "32.0 MT",
-          totalValue: formatCurrency(1184000),
-          rawTotal: 1184000,
-          paymentStatus: "Paid",
-          fulfillmentStatus: "Completed",
-          date: "2026-08-25",
-        },
-        {
-          id: "P-202",
-          orderId: "PROC-8811",
-          buyerName: "Polycab Cables Industry",
-          location: "Halol Plant",
-          material: "Heavy Copper Cable Scrap",
-          category: "Copper",
-          quantity: "11.5 MT",
-          totalValue: formatCurrency(897000),
-          rawTotal: 897000,
-          paymentStatus: "Paid",
-          fulfillmentStatus: "Completed",
-          date: "2026-08-21",
-        },
-      ]);
-    } else {
-      setOrdersList([
-        {
-          id: "S-301",
-          orderId: "SALE-9401",
-          buyerName: "Gujarat Steel Re-Rolling Mill",
-          location: "Ahmedabad Yard",
-          material: "Processed Heavy Melting Steel",
-          category: "Steel",
-          quantity: "28.0 MT",
-          totalValue: formatCurrency(1120000),
-          rawTotal: 1120000,
-          paymentStatus: "Paid",
-          fulfillmentStatus: "InTransit",
-          date: "2026-08-27",
-        },
-      ]);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrdersData();
-  }, [activeTab]);
-
-  const rowSelection = useMemo(
-    () => Object.fromEntries(selectedIds.map((id) => [id, true])),
-    [selectedIds]
+const StatusBadge = ({ status }) => {
+  const s = STATUS_STYLE[status] || STATUS_STYLE.PENDING_PAYMENT;
+  const Icon = s.icon;
+  return (
+    <span className={`${s.bg} ${s.text} inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium`}>
+      <Icon className="w-3 h-3" />{s.label}
+    </span>
   );
+};
 
-  const handleRowSelectionChange = (updaterOrValue) => {
-    const next = typeof updaterOrValue === "function" ? updaterOrValue(rowSelection) : updaterOrValue;
-    setSelectedIds(Object.keys(next).filter((id) => next[id]));
-  };
+const SaleCard = ({ sale, onComplete, isSeller }) => {
+  const [completing, setCompleting] = useState(false);
+  const catName = sale.listing?.scrapRecord?.category?.name || "Scrap Material";
+  const desc    = sale.listing?.scrapRecord?.description;
+  const other   = isSeller ? sale.buyer : sale.seller;
 
-  const handleExportCSV = () => {
-    const itemsToExport =
-      selectedIds.length > 0
-        ? ordersList.filter((o) => selectedIds.includes(o.id))
-        : ordersList;
-
-    const headers = [
-      "Order ID",
-      "Company",
-      "Material",
-      "Category",
-      "Quantity",
-      "Total Amount",
-      "Payment Status",
-      "Fulfillment",
-      "Date",
-    ];
-
-    const rows = itemsToExport.map((o) => [
-      o.orderId,
-      o.buyerName,
-      o.material,
-      o.category,
-      o.quantity,
-      o.totalValue,
-      o.paymentStatus,
-      o.fulfillmentStatus,
-      o.date,
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Dealer_Orders_${activeTab}_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleComplete = async () => {
+    if (!window.confirm("Confirm payment received and mark sale as Completed?")) return;
+    setCompleting(true);
+    await onComplete(sale.id);
+    setCompleting(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/60 p-4 sm:p-6 font-sans text-left">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-11 h-11 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-gray-500" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-900 truncate">{catName}</h3>
+              {desc && <p className="text-xs text-gray-500 truncate">{desc}</p>}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <StatusBadge status={sale.status} />
+            <p className="text-xs text-gray-400">{new Date(sale.createdAt).toLocaleDateString("en-IN")}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 p-3.5 bg-gray-50 rounded-lg text-sm">
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Quantity</p>
+            <p className="font-semibold text-gray-900">{Number(sale.quantityKg).toLocaleString("en-IN")} kg</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Price / kg</p>
+            <p className="font-semibold text-gray-900">{fmt(sale.pricePerKg)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Total Value</p>
+            <p className="font-semibold text-emerald-600">{fmt(sale.totalValue)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">{isSeller ? "Sale ID" : "Reference"}</p>
+            <p className="font-mono text-xs text-gray-700 truncate">{sale.id.slice(0, 12)}…</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100 gap-2 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Building2 className="w-4 h-4" />
+            <span>
+              {isSeller ? "Buyer" : "Seller"}:{" "}
+              <strong className="text-gray-700">{other?.companyName || "—"}</strong>
+            </span>
+          </div>
+
+          {isSeller && sale.status === "PENDING_PAYMENT" && (
+            <button
+              onClick={handleComplete}
+              disabled={completing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-60 shadow-sm"
+            >
+              {completing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              Confirm Payment & Complete
+            </button>
+          )}
+          {sale.status === "COMPLETED" && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({ title, desc }) => (
+  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <AlertCircle className="w-14 h-14 text-gray-300 mx-auto mb-3" />
+    <h3 className="text-base font-semibold text-gray-800 mb-1">{title}</h3>
+    <p className="text-sm text-gray-500">{desc}</p>
+  </div>
+);
+
+const Orders = () => {
+  const [tab, setTab] = useState("procurement");
+  const [purchases, setPurchases] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [loadingPurchases, setLoadingPurchases] = useState(true);
+  const [loadingSales, setLoadingSales] = useState(true);
+  const [toast, setToast] = useState({ message: "", type: "success" });
+
+  const showToast = (message, type = "success") => setToast({ message, type });
+
+  const loadPurchases = useCallback(async () => {
+    setLoadingPurchases(true);
+    try {
+      const res = await ApiService.getSales();
+      if (res?.data?.success) setPurchases(res.data.data?.sales || []);
+    } catch { setPurchases([]); }
+    finally { setLoadingPurchases(false); }
+  }, []);
+
+  const loadSales = useCallback(async () => {
+    setLoadingSales(true);
+    try {
+      const res = await ApiService.getSales({ view: "sales" });
+      if (res?.data?.success) setSales(res.data.data?.sales || []);
+    } catch { setSales([]); }
+    finally { setLoadingSales(false); }
+  }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { loadPurchases(); loadSales(); }, []);
+
+  const handleComplete = async (saleId) => {
+    try {
+      await ApiService.completeSale(saleId);
+      showToast("Sale completed — inventory updated.");
+      loadSales();
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Failed to complete sale.", "error");
+    }
+  };
+
+  const kpis = {
+    procurementSpend: purchases.filter(s => s.status === "COMPLETED").reduce((sum, s) => sum + Number(s.totalValue || 0), 0),
+    salesRevenue:     sales.filter(s => s.status === "COMPLETED").reduce((sum, s) => sum + Number(s.totalValue || 0), 0),
+    pendingSales:     sales.filter(s => s.status === "PENDING_PAYMENT").length,
+    completedSales:   sales.filter(s => s.status === "COMPLETED").length,
+  };
+
+  const loading = tab === "procurement" ? loadingPurchases : loadingSales;
+  const list    = tab === "procurement" ? purchases : sales;
+
+  return (
+    <div className="min-h-screen bg-slate-50/60 p-4 sm:p-6 font-sans">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <nav className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 mb-1">
-            <span>SmartScrap AI</span>
-            <span>&rsaquo;</span>
-            <span>Dealer Portal</span>
-            <span>&rsaquo;</span>
+            <span>SmartScrap AI</span> <span>›</span> <span>Dealer Portal</span> <span>›</span>
             <span className="text-slate-600 font-semibold">Orders</span>
           </nav>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Order Fulfillment & Procurement Tracking
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage industry procurement purchases and buyer fulfillment sales in one place.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Order Fulfillment</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Track procurement from industries and sales to buyers.</p>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchOrdersData}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
-            <span>Refresh</span>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-xs transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-white/90" />
-            <span>Export Orders CSV</span>
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
-              Procurement Spend
-            </span>
-            <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1 block">
-              {formatCurrency(kpis.totalProcurementCost)}
-            </span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
-              Sales Revenue
-            </span>
-            <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1 block">
-              {formatCurrency(kpis.totalSalesRevenue)}
-            </span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
-            <DollarSign className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
-              Gross Profit
-            </span>
-            <span className="text-lg sm:text-xl font-extrabold text-emerald-600 mt-1 block">
-              {formatCurrency(kpis.grossProfit)}
-            </span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
-              Current Yard Stock
-            </span>
-            <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1 block">
-              {(Number(kpis.currentStockKg || 0) / 1000).toFixed(1)} MT
-            </span>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
-            <Package className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-2 mb-4 border-b border-slate-200">
         <button
-          onClick={() => setActiveTab("procurement")}
-          className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-            activeTab === "procurement"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
+          onClick={() => { loadPurchases(); loadSales(); }}
+          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-xs transition-colors"
         >
-          Procurement Orders (From Industries)
-        </button>
-
-        <button
-          onClick={() => setActiveTab("sales")}
-          className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-            activeTab === "sales"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          Sales Orders (To Buyers)
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
         </button>
       </div>
 
-      {/* Main Material Table */}
-      <MaterialTable
-        config={salesTableConfig}
-        data={ordersList}
-        getRowId={(row) => row.id}
-        enableRowSelection
-        rowSelection={rowSelection}
-        onRowSelectionChange={handleRowSelectionChange}
-      />
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "Procurement Spend",  value: fmt(kpis.procurementSpend),  icon: ShoppingBag, color: "text-amber-600",  bg: "bg-amber-50"  },
+          { label: "Sales Revenue",      value: fmt(kpis.salesRevenue),      icon: DollarSign,  color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Gross Profit",       value: fmt(kpis.salesRevenue - kpis.procurementSpend), icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
+          { label: "Pending Sales",      value: kpis.pendingSales,           icon: Clock,       color: "text-yellow-600", bg: "bg-yellow-50"  },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">{label}</span>
+              <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1 block">{value}</span>
+            </div>
+            <div className={`w-10 h-10 rounded-xl ${bg} ${color} border border-current/10 flex items-center justify-center`}>
+              <Icon className="w-5 h-5" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-0 mb-4 border-b border-slate-200">
+        {[
+          { id: "procurement", label: `Procurement from Industries (${purchases.length})` },
+          { id: "sales",       label: `Sales to Buyers (${sales.length})` },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+              tab === id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {label}
+            {id === "sales" && kpis.pendingSales > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-bold">
+                {kpis.pendingSales} pending
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="w-10 h-10 text-blue-500 animate-spin" /></div>
+      ) : list.length === 0 ? (
+        <EmptyState
+          title={tab === "procurement" ? "No procurement orders yet" : "No sales to buyers yet"}
+          desc={tab === "procurement"
+            ? "Browse the marketplace to purchase scrap from industry listings."
+            : "Create listings from your Scrap Inventory — once a buyer's quotation is accepted, sales appear here."}
+        />
+      ) : (
+        <div className="space-y-4">
+          {list.map((sale) => (
+            <SaleCard
+              key={sale.id}
+              sale={sale}
+              isSeller={tab === "sales"}
+              onComplete={handleComplete}
+            />
+          ))}
+        </div>
+      )}
+
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, message: "" })} />
     </div>
   );
 };

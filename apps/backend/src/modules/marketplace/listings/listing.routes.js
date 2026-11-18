@@ -7,6 +7,7 @@ import {
   updateListing,
   publishListing,
   cancelListing,
+  getListingBids,
 } from "./listing.controller.js";
 
 import {
@@ -30,6 +31,8 @@ router.post(
 router.get("/", requireAuth, getListings);
 
 router.get("/:id", requireAuth, getListingById);
+
+router.get("/:id/bids", requireAuth, getListingBids);
 
 router.patch(
   "/:id",

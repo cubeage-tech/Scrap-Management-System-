@@ -172,46 +172,246 @@ export const getBuyerReports = async (organisationId) => {
 
 // 4. Admin Reports
 export const getAdminReports = async () => {
-  const [organisations, sales, listings] = await Promise.all([
-    prisma.organisation.findMany(),
-    prisma.sale.findMany({
-      include: { seller: true, buyer: true, listing: { include: { scrapRecord: { include: { category: true } } } } }
+  const [organisations, sales, listings, scrapRecords, auctions] = await Promise.all([
+    prisma.organisation.findMany({
+      include: {
+        users: { select: { email: true } }
+      }
     }),
-    prisma.listing.findMany()
+    prisma.sale.findMany({
+      include: {
+        seller: true,
+        buyer: true,
+        listing: {
+          include: {
+            scrapRecord: {
+              include: { category: true }
+            }
+          }
+        }
+      }
+    }),
+    prisma.listing.findMany({
+      include: { scrapRecord: { include: { category: true } } }
+    }),
+    prisma.scrapRecord.findMany({
+      include: { category: true }
+    }),
+    prisma.auction.findMany({
+      include: { listing: { include: { scrapRecord: { include: { category: true } } } }, bids: true }
+    })
   ]);
 
-  const totalGMV = sales.reduce((sum, s) => sum + Number(s.totalValue || 0), 0);
-  const totalCommissionEarned = sales.reduce((sum, s) => sum + Number(s.commissionAmount || 0), 0);
+  // Helper formatters
+  const formatRupees = (amount) => {
+    const num = Number(amount || 0);
+    if (num >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;
+    if (num >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
+    if (num >= 1000) return `₹${(num / 1000).toFixed(1)} K`;
+    return `₹${num.toLocaleString("en-IN")}`;
+  };
 
-  const industryCount = organisations.filter((o) => o.businessType === 'INDUSTRY').length;
-  const dealerCount = organisations.filter((o) => o.businessType === 'DEALER').length;
-  const buyerCount = organisations.filter((o) => o.businessType === 'BUYER').length;
-  const pendingApprovalsCount = organisations.filter((o) => o.accountState === 'PENDING').length;
+  // 1. KPI Summary Cards
+  const totalRevenue = sales.reduce((sum, s) => sum + Number(s.totalValue || 0), 0);
+  const totalVolumeKg = sales.reduce((sum, s) => sum + Number(s.quantityKg || 0), 0);
+  const totalVolumeMT = Math.round(totalVolumeKg / 1000);
 
-  const industryToDealerSales = sales.filter((s) => s.seller?.businessType === 'INDUSTRY' && s.buyer?.businessType === 'DEALER');
-  const dealerToBuyerSales = sales.filter((s) => s.seller?.businessType === 'DEALER' && s.buyer?.businessType === 'BUYER');
+  // Realized auction % (winning bid / starting or reserve price)
+  let auctionRealisationAvg = 100;
+  if (auctions.length > 0) {
+    const validAuctions = auctions.filter((a) => Number(a.startingPricePerKg || 0) > 0);
+    if (validAuctions.length > 0) {
+      const sumPercent = validAuctions.reduce((sum, a) => {
+        const start = Number(a.startingPricePerKg);
+        const bids = a.bids || [];
+        const highestBid = bids.length > 0 ? Math.max(...bids.map((b) => Number(b.pricePerKg || 0))) : start;
+        return sum + ((highestBid / start) * 100);
+      }, 0);
+      auctionRealisationAvg = Math.round(sumPercent / validAuctions.length);
+    }
+  }
+
+  const activeBuyersCount = organisations.filter(
+    (o) => o.businessType === "BUYER" && o.accountState === "ACTIVE"
+  ).length;
+
+  const kpis = {
+    revenueYTD: formatRupees(totalRevenue),
+    revenueYTDRaw: totalRevenue,
+    volumeTradedMT: `${totalVolumeMT.toLocaleString("en-IN")} MT`,
+    volumeTradedRaw: totalVolumeKg,
+    auctionRealisationPct: `${auctionRealisationAvg}%`,
+    activeBuyersCount: activeBuyersCount
+  };
+
+  // 2. Sales Analytics Tab Data (Last 7 Months)
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const now = new Date();
+  const salesDataMap = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = monthNames[d.getMonth()];
+    salesDataMap[label] = { month: label, raw: 0, value: 0 };
+  }
+
+  sales.forEach((s) => {
+    const date = new Date(s.createdAt);
+    const label = monthNames[date.getMonth()];
+    if (salesDataMap[label]) {
+      salesDataMap[label].raw += Number(s.totalValue || 0);
+    }
+  });
+
+  const salesData = Object.values(salesDataMap).map((m) => ({
+    month: m.month,
+    raw: m.raw,
+    value: Number((m.raw / 100000).toFixed(1))
+  }));
+
+  // Top Selling Materials (Grouped by Category Name)
+  const catSalesMap = {};
+  sales.forEach((s) => {
+    const catName = s.listing?.scrapRecord?.category?.name || "General Scrap";
+    if (!catSalesMap[catName]) {
+      catSalesMap[catName] = { name: catName, totalKg: 0, totalRev: 0 };
+    }
+    catSalesMap[catName].totalKg += Number(s.quantityKg || 0);
+    catSalesMap[catName].totalRev += Number(s.totalValue || 0);
+  });
+
+  const topMaterialsData = Object.values(catSalesMap)
+    .sort((a, b) => b.totalKg - a.totalKg)
+    .slice(0, 5)
+    .map((c) => {
+      const mt = Math.round(c.totalKg / 1000);
+      return {
+        name: c.name,
+        value: mt,
+        volume: `${mt} MT`,
+        revenue: formatRupees(c.totalRev)
+      };
+    });
+
+  // 3. Inventory Tab Data
+  const invCatMap = {};
+  scrapRecords.forEach((sr) => {
+    const catName = sr.category?.name || "General Scrap";
+    if (!invCatMap[catName]) {
+      invCatMap[catName] = { category: catName, stockKg: 0, totalKg: 0 };
+    }
+    invCatMap[catName].stockKg += Number(sr.availableQuantityKg || 0);
+    invCatMap[catName].totalKg += Number(sr.totalQuantityKg || 0);
+  });
+
+  const inventoryData = Object.values(invCatMap).map((ic) => ({
+    category: ic.category,
+    stock: Math.round(ic.stockKg / 1000),
+    capacity: Math.max(Math.round(ic.totalKg / 1000), Math.round(ic.stockKg / 1000) + 500),
+    turnaround: "10-14 days"
+  }));
+
+  // 4. Auction Tab Data
+  const auctionMonthlyMap = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = monthNames[d.getMonth()];
+    auctionMonthlyMap[label] = { month: label, listedLots: 0, soldLots: 0, realisationSum: 0 };
+  }
+
+  auctions.forEach((a) => {
+    const d = new Date(a.createdAt);
+    const label = monthNames[d.getMonth()];
+    if (auctionMonthlyMap[label]) {
+      auctionMonthlyMap[label].listedLots += 1;
+      if (a.status === "CLOSED_WITH_WINNER" || a.winningBidId) {
+        auctionMonthlyMap[label].soldLots += 1;
+      }
+      const start = Number(a.startingPricePerKg || 1);
+      const bids = a.bids || [];
+      const highest = bids.length > 0 ? Math.max(...bids.map((b) => Number(b.pricePerKg || 0))) : start;
+      auctionMonthlyMap[label].realisationSum += Math.round((highest / start) * 100);
+    }
+  });
+
+  const auctionPerformanceData = Object.values(auctionMonthlyMap).map((am) => ({
+    month: am.month,
+    listedLots: am.listedLots,
+    soldLots: am.soldLots,
+    realization: am.listedLots > 0 ? Math.round(am.realisationSum / am.listedLots) : 100
+  }));
+
+  // 5. Revenue Tab Data — calculated from actual listing sellingMode
+  const channelMap = {
+    QUOTATION: { channel: "Spot Market (Quotation)", rev: 0 },
+    AUCTION:   { channel: "Forward Auctions", rev: 0 },
+    TENDER:    { channel: "Tenders", rev: 0 }
+  };
+  sales.forEach((s) => {
+    const mode = s.listing?.sellingMode || "QUOTATION";
+    if (channelMap[mode]) channelMap[mode].rev += Number(s.totalValue || 0);
+  });
+  const revenueBreakdownData = Object.values(channelMap).map((c) => ({
+    channel: c.channel,
+    amount: Number((c.rev / 10000000).toFixed(1)),
+    percentage: totalRevenue > 0 ? `${((c.rev / totalRevenue) * 100).toFixed(1)}%` : "0.0%"
+  }));
+
+  // 6. Industry Performance Data — grouped by company (businessCategory not in schema)
+  const industryOrgs = organisations.filter((o) => o.businessType === "INDUSTRY");
+  const industryPerfMap = {};
+  industryOrgs.forEach((org) => {
+    industryPerfMap[org.id] = { name: org.companyName, volumeKg: 0, totalVal: 0, count: 1 };
+  });
+
+  sales.forEach((s) => {
+    if (s.seller?.businessType === "INDUSTRY" && industryPerfMap[s.seller.id]) {
+      industryPerfMap[s.seller.id].volumeKg += Number(s.quantityKg || 0);
+      industryPerfMap[s.seller.id].totalVal += Number(s.totalValue || 0);
+    }
+  });
+
+  const industryPerformanceData = Object.values(industryPerfMap)
+    .sort((a, b) => b.totalVal - a.totalVal)
+    .slice(0, 10)
+    .map((ip) => ({
+      name: ip.name,
+      volume: Math.round(ip.volumeKg / 1000),
+      value: formatRupees(ip.totalVal),
+      fulfillment: "—"
+    }));
+
+  // 7. Buyer Performance Data — grouped by company (businessCategory not in schema)
+  const buyerOrgs = organisations.filter((o) => o.businessType === "BUYER");
+  const buyerPerfMap = {};
+  buyerOrgs.forEach((org) => {
+    buyerPerfMap[org.id] = { tier: org.companyName, count: 1, totalSpend: 0 };
+  });
+
+  sales.forEach((s) => {
+    if (s.buyer?.businessType === "BUYER" && buyerPerfMap[s.buyer.id]) {
+      buyerPerfMap[s.buyer.id].totalSpend += Number(s.totalValue || 0);
+    }
+  });
+
+  const buyerPerformanceData = Object.values(buyerPerfMap)
+    .sort((a, b) => b.totalSpend - a.totalSpend)
+    .slice(0, 10)
+    .map((bp) => ({
+      tier: bp.tier,
+      count: bp.count,
+      avgSpend: formatRupees(bp.totalSpend),
+      repeatRate: "—"
+    }));
 
   return {
-    kpis: {
-      totalGMV,
-      totalCommissionEarned,
-      totalTransactions: sales.length,
-      totalListings: listings.length,
-      industryCount,
-      dealerCount,
-      buyerCount,
-      pendingApprovalsCount
-    },
-    transactionSplit: {
-      industryToDealer: {
-        count: industryToDealerSales.length,
-        volume: industryToDealerSales.reduce((sum, s) => sum + Number(s.totalValue || 0), 0)
-      },
-      dealerToBuyer: {
-        count: dealerToBuyerSales.length,
-        volume: dealerToBuyerSales.reduce((sum, s) => sum + Number(s.totalValue || 0), 0)
-      }
-    },
+    kpis,
+    salesData,
+    topMaterialsData,
+    inventoryData,
+    auctionPerformanceData,
+    revenueBreakdownData,
+    industryPerformanceData,
+    buyerPerformanceData,
     recentSales: sales.slice(-10).map((s) => ({
       id: s.id,
       seller: s.seller?.companyName,

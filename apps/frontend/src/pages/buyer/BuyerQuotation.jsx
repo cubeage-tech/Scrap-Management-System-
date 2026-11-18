@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import ApiService from "../../core/services/api.service";
 import { useNavigate } from "react-router-dom";
+import Toast from "../../components/common/Toast";
 
 const BuyerQuotation = () => {
   const navigate = useNavigate();
@@ -18,10 +19,7 @@ const BuyerQuotation = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-
-  useEffect(() => {
-    loadQuotations();
-  }, []);
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   const loadQuotations = async () => {
     setIsLoading(true);
@@ -39,6 +37,9 @@ const BuyerQuotation = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadQuotations(); }, []);
+
   const handleWithdraw = async (quotationId) => {
     if (!window.confirm("Withdraw this quotation? This action cannot be undone.")) {
       return;
@@ -50,12 +51,12 @@ const BuyerQuotation = () => {
 
 
       if (response?.data?.success) {
-        alert("Quotation withdrawn successfully");
+        setToast({ message: "Quotation withdrawn successfully", type: "success" });
         loadQuotations();
       }
     } catch (error) {
       console.error("Failed to withdraw quotation:", error);
-      alert(error.response?.data?.message || "Failed to withdraw quotation");
+      setToast({ message: error.response?.data?.message || "Failed to withdraw quotation", type: "error" });
     } finally {
       setIsWithdrawing(false);
     }
@@ -331,6 +332,12 @@ const BuyerQuotation = () => {
           ))}
         </div>
       )}
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, message: "" })}
+      />
     </div>
   );
 };

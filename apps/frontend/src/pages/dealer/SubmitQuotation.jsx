@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Package, IndianRupee, Calendar, FileText, Loader2, ArrowLeft } from "lucide-react";
 import ApiService from "../../core/services/api.service";
+import Toast from "../../components/common/Toast";
 
 const SubmitQuotation = () => {
   const navigate = useNavigate();
@@ -11,23 +12,15 @@ const SubmitQuotation = () => {
   const [listing, setListing] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   const [formData, setFormData] = useState({
     pricePerKg: "",
     quantityKg: "",
-    paymentTerms: "DAYS_7",
+    paymentTerms: "DAYS_15",
     note: "",
     validUntil: "",
   });
-
-  useEffect(() => {
-    if (listingId) {
-      loadListing();
-    } else {
-      alert("No listing ID provided");
-      navigate("/dealer/marketplace");
-    }
-  }, [listingId]);
 
   const loadListing = async () => {
     setIsLoading(true);
@@ -46,12 +39,15 @@ const SubmitQuotation = () => {
       }
     } catch (error) {
       console.error("Failed to load listing:", error);
-      alert("Failed to load listing details");
-      navigate("/dealer/marketplace");
+      setToast({ message: "Failed to load listing details", type: "error" });
+      setTimeout(() => navigate("/dealer/marketplace"), 1500);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (listingId) { loadListing(); } else { setToast({ message: "No listing ID provided", type: "error" }); setTimeout(() => navigate("/dealer/marketplace"), 1500); } }, [listingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,7 +67,7 @@ const SubmitQuotation = () => {
     e.preventDefault();
 
     if (!formData.pricePerKg || !formData.quantityKg) {
-      alert("Please fill in all required fields");
+      setToast({ message: "Please fill in all required fields", type: "error" });
       return;
     }
 
@@ -90,12 +86,12 @@ const SubmitQuotation = () => {
 
 
       if (response?.data?.success) {
-        alert("Quotation submitted successfully!");
-        navigate("/dealer/quotations");
+        setToast({ message: "Quotation submitted successfully!", type: "success" });
+        setTimeout(() => navigate("/dealer/quotations"), 1200);
       }
     } catch (error) {
       console.error("Failed to submit quotation:", error);
-      alert(error.response?.data?.message || "Failed to submit quotation. Please try again.");
+      setToast({ message: error.response?.data?.message || "Failed to submit quotation. Please try again.", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -289,7 +285,6 @@ const SubmitQuotation = () => {
                 >
                   <option value="ADVANCE">Advance Payment</option>
                   <option value="ON_PICKUP">Payment on Pickup</option>
-                  <option value="DAYS_7">7 Days Credit</option>
                   <option value="DAYS_15">15 Days Credit</option>
                   <option value="DAYS_30">30 Days Credit</option>
                   <option value="DAYS_45">45 Days Credit</option>
@@ -377,6 +372,13 @@ const SubmitQuotation = () => {
           </form>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, message: "" })}
+      />
     </div>
   );
 };

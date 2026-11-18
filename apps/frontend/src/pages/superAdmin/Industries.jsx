@@ -6,6 +6,7 @@ import MaterialTable from "../../components/common/MaterialTable";
 import { adminTableConfig } from "../../configs/tables/adminTable.config";
 import ApiService from "../../core/services/api.service";
 import Loader from "../../components/common/Loader";
+import Toast from "../../components/common/Toast";
 import IndustryOnboardModal from "./industries/IndustryOnboardModal";
 import IndustryViewModal from "./industries/IndustryViewModal";
 import IndustryEditModal from "./industries/IndustryEditModal";
@@ -41,6 +42,7 @@ export default function Industries() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   // Modal States
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
@@ -227,9 +229,10 @@ export default function Industries() {
         await updateIndustryStatus(activeIndustry.id, {
           accountState: STATUS_TO_BACKEND[formData.status],
         });
+        setToast({ message: `Status updated to ${formData.status}`, type: "success" });
       } catch (err) {
         console.error("Failed to update industry status:", err);
-        alert(err.response?.data?.message || "Failed to update industry status.");
+        setToast({ message: err.response?.data?.message || "Failed to update industry status.", type: "error" });
         return;
       }
     }
@@ -266,9 +269,10 @@ export default function Industries() {
         prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
       );
       setActiveIndustry((prev) => (prev && prev.id === id ? { ...prev, status: newStatus } : prev));
+      setToast({ message: `Industry status updated to ${newStatus}`, type: "success" });
     } catch (err) {
       console.error("Failed to update industry status:", err);
-      alert(err.response?.data?.message || "Failed to update industry status.");
+      setToast({ message: err.response?.data?.message || "Failed to update industry status.", type: "error" });
     }
   };
 
@@ -393,6 +397,13 @@ export default function Industries() {
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleEditIndustry}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, message: "" })}
       />
     </div>
   );

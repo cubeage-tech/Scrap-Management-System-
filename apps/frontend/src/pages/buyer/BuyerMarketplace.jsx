@@ -1,25 +1,34 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Package, MapPin, IndianRupee, Clock, Loader2, ShoppingCart } from "lucide-react";
+import { Search, Package, MapPin, Clock, Loader2, ShoppingCart } from "lucide-react";
 import ApiService from "../../core/services/api.service";
 
 const BuyerMarketplace = () => {
   const navigate = useNavigate();
   const [listings, setListings] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sellingMode, setSellingMode] = useState("all");
 
-  useEffect(() => {
-    loadListings();
-  }, [selectedCategory, sellingMode]);
+  const fetchCategories = async () => {
+    try {
+      const response = await ApiService.getCategories();
+      if (response?.data?.success) {
+        setCategories(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
 
   const loadListings = async () => {
     setIsLoading(true);
     try {
       const params = {
         status: "PUBLISHED",
+        ownerBusinessType: "DEALER",
       };
 
       if (selectedCategory !== "all") {
@@ -32,13 +41,8 @@ const BuyerMarketplace = () => {
 
       const response = await ApiService.getListings(params);
 
-      
       if (response?.data?.success) {
-        // Filter to show only DEALER listings (scrap that dealers own and are reselling)
-        const dealerListings = (response.data.data || []).filter(
-          (listing) => listing.scrapRecord?.owner?.businessType === "DEALER"
-        );
-        setListings(dealerListings);
+        setListings(response.data.data || []);
       }
     } catch (error) {
       console.error("Failed to load marketplace listings:", error);
@@ -47,6 +51,12 @@ const BuyerMarketplace = () => {
       setIsLoading(false);
     }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchCategories(); }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadListings(); }, [selectedCategory, sellingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredListings = listings.filter((listing) => {
     const query = searchQuery.toLowerCase();
@@ -80,8 +90,9 @@ const BuyerMarketplace = () => {
   };
 
   const handleMakeOffer = (listing) => {
-    // Navigate to quotation submission page
-    navigate(`/buyer/submit-quotation?listingId=${listing.id}`);
+    // Buyer→Dealer is always quotation-based; TENDER mode is the Industry→Dealer channel
+    const mode = listing.sellingMode === "AUCTION" ? "AUCTION" : "QUOTATION";
+    navigate(`/buyer/submit-quotation?listingId=${listing.id}&mode=${mode}`);
   };
 
   if (isLoading) {
@@ -144,7 +155,11 @@ const BuyerMarketplace = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Categories</option>
-              {/* Add dynamic categories here */}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -199,10 +214,10 @@ const BuyerMarketplace = () => {
           <div className="col-span-full bg-white rounded-lg border border-gray-200 p-12 text-center">
             <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No listings found from dealers
+              No dealer listings available
             </h3>
             <p className="text-gray-600 text-sm">
-              Try adjusting your filters or check back later for new listings
+              No verified dealers have active listings right now. Check back later or adjust your filters.
             </p>
           </div>
         ) : (
@@ -278,11 +293,7 @@ const BuyerMarketplace = () => {
                   onClick={() => handleMakeOffer(listing)}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors"
                 >
-                  {listing.sellingMode === "QUOTATION"
-                    ? "Submit Quotation"
-                    : listing.sellingMode === "AUCTION"
-                    ? "Place Bid"
-                    : "Submit Tender"}
+                  {listing.sellingMode === "AUCTION" ? "Place Bid" : "Submit Quotation"}
                 </button>
               </div>
             </div>

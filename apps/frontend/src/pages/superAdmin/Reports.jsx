@@ -2,27 +2,15 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Download,
-  Calendar,
   ChevronRight,
-  IndianRupee,
   Package,
   Gavel,
   Users,
-  TrendingUp,
   BarChart2,
   FileSpreadsheet,
   FileText,
-  Check,
   X,
-  Clock,
-  Mail,
-  Share2,
-  Printer,
-  Layers,
-  Sparkles,
-  ArrowUpRight,
   CheckCircle2,
-  Info,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -59,11 +47,11 @@ const salesData = [
 
 // 2. Top Selling Materials (in Metric Tons / Realized Volume Index)
 const topMaterialsData = [
-  { name: "Steel Turnings", value: 285, volume: "285 MT", revenue: "₹1.42 Cr" },
-  { name: "Copper Millberry", value: 232, volume: "232 MT", revenue: "₹1.85 Cr" },
-  { name: "Aluminium 6063", value: 190, volume: "190 MT", revenue: "₹85.5 L" },
-  { name: "E-Waste PCB", value: 142, volume: "142 MT", revenue: "₹1.13 Cr" },
-  { name: "HDPE Regrind", value: 95, volume: "95 MT", revenue: "₹38.2 L" },
+  { name: "Steel Turnings", value: 285, volume: "285 Tons", revenue: "₹1.42 Cr" },
+  { name: "Copper Millberry", value: 232, volume: "232 Tons", revenue: "₹1.85 Cr" },
+  { name: "Aluminium 6063", value: 190, volume: "190 Tons", revenue: "₹85.5 L" },
+  { name: "E-Waste PCB", value: 142, volume: "142 Tons", revenue: "₹1.13 Cr" },
+  { name: "HDPE Regrind", value: 95, volume: "95 Tons", revenue: "₹38.2 L" },
 ];
 
 // 3. Inventory Data for Inventory Tab
@@ -151,10 +139,6 @@ const Reports = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  useEffect(() => {
-    fetchAdminReports();
-  }, []);
-
   const fetchAdminReports = async () => {
     try {
       const res = await ApiService.getAdminReports();
@@ -165,6 +149,9 @@ const Reports = () => {
       console.error("Error fetching admin reports:", err);
     }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchAdminReports(); }, []);
 
   // Schedule Modal Form State
   const [scheduleForm, setScheduleForm] = useState({
@@ -192,7 +179,7 @@ const Reports = () => {
       showToast("PDF report downloaded successfully!");
       try {
         window.print();
-      } catch (e) {
+      } catch {
         // Safe fallback
       }
     }, 1200);
@@ -294,10 +281,10 @@ const Reports = () => {
             </div>
             <div className="mt-3">
               <div className="text-2xl sm:text-[26px] font-bold text-foreground tracking-tight">
-                ₹41.3 Cr
+                {adminReportData?.kpis?.revenueYTD || "₹0"}
               </div>
               <div className="mt-1 flex items-center text-xs font-semibold text-emerald-600">
-                <span>↗ +18.2%</span>
+                <span>↗ Live Database</span>
               </div>
             </div>
           </div>
@@ -314,10 +301,10 @@ const Reports = () => {
             </div>
             <div className="mt-3">
               <div className="text-2xl sm:text-[26px] font-bold text-foreground tracking-tight">
-                12,846 MT
+                {adminReportData?.kpis?.volumeTradedMT || "0 Tons"}
               </div>
               <div className="mt-1 flex items-center text-xs font-semibold text-emerald-600">
-                <span>↗ +8.4%</span>
+                <span>↗ Realized Trade</span>
               </div>
             </div>
           </div>
@@ -334,10 +321,10 @@ const Reports = () => {
             </div>
             <div className="mt-3">
               <div className="text-2xl sm:text-[26px] font-bold text-foreground tracking-tight">
-                112%
+                {adminReportData?.kpis?.auctionRealisationPct || "100%"}
               </div>
               <div className="mt-1 flex items-center text-xs font-semibold text-emerald-600">
-                <span>↗ +4 pts vs reserve</span>
+                <span>↗ vs Reserve Floor</span>
               </div>
             </div>
           </div>
@@ -354,10 +341,10 @@ const Reports = () => {
             </div>
             <div className="mt-3">
               <div className="text-2xl sm:text-[26px] font-bold text-foreground tracking-tight">
-                932
+                {adminReportData?.kpis?.activeBuyersCount ?? 0}
               </div>
               <div className="mt-1 flex items-center text-xs font-semibold text-emerald-600">
-                <span>↗ +21</span>
+                <span>↗ Verified Accounts</span>
               </div>
             </div>
           </div>
@@ -400,7 +387,7 @@ const Reports = () => {
               <div className="w-full h-[280px] sm:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={salesData}
+                    data={adminReportData?.salesData?.length ? adminReportData.salesData : salesData}
                     margin={{ top: 10, right: 15, left: -20, bottom: 0 }}
                   >
                     <defs>
@@ -424,7 +411,6 @@ const Reports = () => {
                       dy={8}
                     />
                     <YAxis
-                      domain={[0, 100]}
                       ticks={[0, 25, 50, 75, 100]}
                       tickFormatter={(val) => `₹${val}L`}
                       axisLine={false}
@@ -465,7 +451,7 @@ const Reports = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
-                    data={topMaterialsData}
+                    data={adminReportData?.topMaterialsData?.length ? adminReportData.topMaterialsData : topMaterialsData}
                     margin={{ top: 5, right: 15, left: 10, bottom: 0 }}
                   >
                     <CartesianGrid
@@ -484,8 +470,6 @@ const Reports = () => {
                     />
                     <XAxis
                       type="number"
-                      domain={[0, 300]}
-                      ticks={[0, 75, 150, 225, 300]}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "currentColor", fontSize: 11 }}
@@ -520,10 +504,13 @@ const Reports = () => {
                   </p>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-50 text-blue-600">
-                  12,846 MT Total
+                  {adminReportData?.kpis?.volumeTradedMT || "0 Tons Total"}
                 </span>
               </div>
-              <MaterialTable columns={inventoryReportColumns} data={inventoryData} />
+              <MaterialTable
+                columns={inventoryReportColumns}
+                data={adminReportData?.inventoryData?.length ? adminReportData.inventoryData : inventoryData}
+              />
             </div>
 
             <div className="lg:col-span-5 bg-card rounded-xl border border-border p-5 sm:p-6 shadow-2xs flex flex-col justify-between">
@@ -590,7 +577,10 @@ const Reports = () => {
 
               <div className="w-full h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={auctionPerformanceData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                  <AreaChart
+                    data={adminReportData?.auctionPerformanceData?.length ? adminReportData.auctionPerformanceData : auctionPerformanceData}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="auctionGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
@@ -658,11 +648,11 @@ const Reports = () => {
                 Revenue Streams (YTD Breakdown)
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 mb-4">
-                Total ₹41.3 Cr generated across all operational channels
+                Total {adminReportData?.kpis?.revenueYTD || "₹0"} generated across all operational channels
               </p>
 
               <div className="space-y-4">
-                {revenueBreakdownData.map((stream, idx) => (
+                {(adminReportData?.revenueBreakdownData?.length ? adminReportData.revenueBreakdownData : revenueBreakdownData).map((stream, idx) => (
                   <div key={idx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-medium text-foreground">
                       <span>{stream.channel}</span>
@@ -727,11 +717,14 @@ const Reports = () => {
                 </p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 self-start sm:self-auto">
-                486 Enrolled Industries
+                Live Database Active
               </span>
             </div>
 
-            <MaterialTable columns={industryPerformanceColumns} data={industryPerformanceData} />
+            <MaterialTable
+              columns={industryPerformanceColumns}
+              data={adminReportData?.industryPerformanceData?.length ? adminReportData.industryPerformanceData : industryPerformanceData}
+            />
           </div>
         )}
 
@@ -748,12 +741,12 @@ const Reports = () => {
                 </p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 self-start sm:self-auto">
-                932 Active Verified Buyers
+                {adminReportData?.kpis?.activeBuyersCount ?? 0} Active Verified Buyers
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-              {buyerPerformanceData.map((item, idx) => (
+              {(adminReportData?.buyerPerformanceData?.length ? adminReportData.buyerPerformanceData : buyerPerformanceData).map((item, idx) => (
                 <div key={idx} className="p-4 rounded-xl border border-border bg-muted/40 hover:bg-card hover:shadow-2xs transition-all">
                   <span className="text-xs font-semibold text-primary">{item.tier}</span>
                   <div className="mt-2 flex items-baseline justify-between">

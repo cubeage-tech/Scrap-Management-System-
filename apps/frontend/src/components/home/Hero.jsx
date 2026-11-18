@@ -1,20 +1,36 @@
-import { ArrowRight, Play, TrendingUp, Gavel } from "lucide-react";
+import { ArrowRight, Play, TrendingUp, Gavel, Zap, CheckCircle } from "lucide-react";
+
+const scrapCategories = [
+  { name: "Ferrous Metals", sub: "HMS · MS · Cast Iron", range: "₹28–34/kg", from: "from-slate-600", to: "to-slate-800" },
+  { name: "Non-Ferrous", sub: "Copper · Aluminium · Brass", range: "₹140–480/kg", from: "from-amber-600", to: "to-orange-700" },
+  { name: "E-Waste", sub: "PCBs · Motors · Wiring", range: "₹45–200/kg", from: "from-emerald-600", to: "to-teal-800" },
+  { name: "Plastic Scrap", sub: "HDPE · PVC · ABS", range: "₹8–22/kg", from: "from-sky-600", to: "to-blue-800" },
+];
+
+const liveActivity = [
+  { event: "Auction Closed", detail: "MS Scrap · 12 Tons · 8 bids", amount: "₹4.2L", color: "bg-green-400" },
+  { event: "Tender Open", detail: "Copper Wire · 2.5 Tons · 3 days left", amount: "₹18.4L", color: "bg-amber-400" },
+  { event: "Quote Accepted", detail: "Aluminium Ingot · 8 Tons", amount: "₹9.6L", color: "bg-blue-400" },
+];
 
 const Hero = () => {
   return (
     <section className="relative bg-brand text-white overflow-hidden min-h-[90vh] flex items-center">
       {/* Background Grid Pattern */}
-      <div 
-        className="absolute inset-0 opacity-20 pointer-events-none" 
+      <div
+        className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
-          backgroundImage: 'linear-gradient(var(--brand-foreground) 1px, transparent 1px), linear-gradient(90deg, var(--brand-foreground) 1px, transparent 1px)',
-          backgroundSize: '40px 40px'
+          backgroundImage: "linear-gradient(var(--brand-foreground) 1px, transparent 1px), linear-gradient(90deg, var(--brand-foreground) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
         }}
-      ></div>
+      />
+
+      {/* Radial glow top-right */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-brand-accent/5 blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6 py-20 relative z-10 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          
+
           {/* Left Column: Content */}
           <div className="max-w-2xl">
             {/* Badge */}
@@ -39,166 +55,116 @@ const Hero = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center gap-4 mb-12">
-              <a href="/signup" className="px-8 py-4 rounded-xl bg-brand-accent text-foreground font-semibold flex items-center gap-2 hover:bg-brand-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand transition-all hover:-translate-y-0.5 active:scale-95 shadow-[0_0_20px_color-mix(in_oklch,var(--brand-accent)_30%,transparent)] w-fit">
+              <a
+                href="/signup"
+                className="px-8 py-4 rounded-xl bg-brand-accent text-foreground font-semibold flex items-center gap-2 hover:bg-brand-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand transition-all hover:-translate-y-0.5 active:scale-95 shadow-[0_0_20px_color-mix(in_oklch,var(--brand-accent)_30%,transparent)] w-fit"
+              >
                 Start Free Trial <ArrowRight className="w-5 h-5" />
               </a>
-              <a href="/signup" className="px-8 py-4 rounded-xl border border-white/20 font-semibold flex items-center gap-2 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand transition-all hover:-translate-y-0.5 active:scale-95 w-fit">
+              <a
+                href="/signup"
+                className="px-8 py-4 rounded-xl border border-white/20 font-semibold flex items-center gap-2 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand transition-all hover:-translate-y-0.5 active:scale-95 w-fit"
+              >
                 <Play className="w-5 h-5 fill-current" /> Watch Demo
               </a>
             </div>
 
-            {/* Social Proof */}
-            <div className="flex items-center gap-6">
-              <div className="flex -space-x-3">
-                {/* Avatars */}
-                <div className="w-10 h-10 rounded-full border-2 border-brand bg-emerald-500 flex items-center justify-center text-xs font-bold">RM</div>
-                <div className="w-10 h-10 rounded-full border-2 border-brand bg-blue-500 flex items-center justify-center text-xs font-bold">PS</div>
-                <div className="w-10 h-10 rounded-full border-2 border-brand bg-purple-500 flex items-center justify-center text-xs font-bold">AG</div>
-                <div className="w-10 h-10 rounded-full border-2 border-brand bg-pink-500 flex items-center justify-center text-xs font-bold">SK</div>
-                <div className="w-10 h-10 rounded-full border-2 border-brand bg-red-500 flex items-center justify-center text-xs font-bold">NP</div>
+            {/* Trust chips */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-blue-100">
+                <span>♻️</span> Carbon-neutral trading
               </div>
-              <div>
-                <div className="flex items-center gap-1 text-brand-accent mb-1">
-                  {'★★★★★'.split('').map((star, i) => <span key={i}>{star}</span>)}
-                  <span className="text-white font-bold ml-1">4.9</span>
-                </div>
-                <div className="text-sm text-blue-200">
-                  Trusted by 1,284+ businesses
-                </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-blue-100">
+                <span>🔒</span> Bank-grade security
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-blue-100">
+                <span>⚡</span> Live in under 24 hrs
               </div>
             </div>
           </div>
 
-          {/* Right Column: UI Mockup */}
-          <div className="relative w-full aspect-[4/3] hidden lg:block">
-            {/* Main Browser Window */}
-            <div className="absolute inset-0 bg-foreground rounded-xl border border-gray-800 shadow-2xl overflow-hidden flex flex-col">
-              {/* Browser Header */}
-              <div className="h-10 bg-gray-900 border-b border-gray-800 flex items-center px-4 gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <div className="ml-4 bg-gray-800 rounded-md px-3 py-1 text-xs text-gray-400 w-64 text-center">
-                  app.smartscrap.ai/dashboard
-                </div>
+          {/* Right Column: Industrial Market Composition */}
+          <div className="relative w-full hidden lg:flex flex-col gap-4">
+
+            {/* Header pill */}
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 backdrop-blur-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-sm font-semibold text-white">Live Market</span>
+                <span className="text-xs text-white/40">·</span>
+                <span className="text-xs text-blue-300">Mumbai · Pune · Delhi · Chennai</span>
               </div>
-
-              {/* Dashboard Content */}
-              <div className="flex-1 p-6 flex flex-col gap-4 relative">
-                
-                {/* Stats Cards */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                    <div className="text-xs text-gray-400 mb-1">Inventory</div>
-                    <div className="text-lg font-bold">1,420 MT</div>
-                  </div>
-                  <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                    <div className="text-xs text-gray-400 mb-1">Active Auctions</div>
-                    <div className="text-lg font-bold text-yellow-500">2 Live</div>
-                  </div>
-                  <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                    <div className="text-xs text-gray-400 mb-1">Today's Revenue</div>
-                    <div className="text-lg font-bold text-green-500">₹1.7Cr</div>
-                  </div>
-                  <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
-                    <div className="text-xs text-gray-400 mb-1">Pending Quotes</div>
-                    <div className="text-lg font-bold text-purple-400">3</div>
-                  </div>
-                </div>
-
-                {/* Chart Area */}
-                <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-4 flex-1">
-                  <div className="text-sm font-semibold mb-4">Monthly Revenue</div>
-                  <div className="flex items-end gap-2 h-24 mt-4">
-                    {/* Mock Bars */}
-                    {[40, 55, 30, 65, 45, 75, 60, 35].map((height, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2">
-                        <div 
-                          className={`w-full rounded-t-sm ${i === 5 ? 'bg-blue-500' : 'bg-blue-500/40'}`} 
-                          style={{ height: `${height}%` }}
-                        ></div>
-                        <div className="text-[10px] text-gray-500">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'][i]}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* List Items */}
-                <div className="flex flex-col gap-2">
-                  {/* Item 1 */}
-                  <div className="bg-gray-800/50 p-3 rounded-lg border border-gray-700/50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-gray-700"></div>
-                      <div>
-                        <div className="text-sm font-semibold">MS Steel HMS 1&2</div>
-                        <div className="text-xs text-gray-400">Metro Recyclers</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm font-bold">₹42.5L</div>
-                      <span className="px-2 py-1 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-500">
-                        Live Auction
-                      </span>
-                    </div>
-                  </div>
-                  {/* Item 2 */}
-                  <div className="bg-gray-800/50 p-3 rounded-lg border border-gray-700/50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-gray-700"></div>
-                      <div>
-                        <div className="text-sm font-semibold">Copper Cable Scrap</div>
-                        <div className="text-xs text-gray-400">Sanjay Metals</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm font-bold">₹28.05L</div>
-                      <span className="px-2 py-1 rounded text-[10px] font-medium bg-orange-500/20 text-orange-400">
-                        Pending
-                      </span>
-                    </div>
-                  </div>
-                  {/* Item 3 */}
-                  <div className="bg-gray-800/50 p-3 rounded-lg border border-gray-700/50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-gray-700"></div>
-                      <div>
-                        <div className="text-sm font-semibold">Aluminium Die-Cast</div>
-                        <div className="text-xs text-gray-400">National Scrap</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm font-bold">₹20.64L</div>
-                      <span className="px-2 py-1 rounded text-[10px] font-medium bg-green-500/20 text-green-400">
-                        Completed
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-brand-accent font-semibold">
+                <Zap className="w-3.5 h-3.5" /> Real-time
               </div>
             </div>
 
-            {/* Floating Badges */}
-            <div className="absolute top-[30%] -left-12 bg-white rounded-xl p-4 shadow-xl flex items-center gap-3 animate-[bounce_4s_infinite]">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+            {/* Scrap Category Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {scrapCategories.map((cat) => (
+                <div
+                  key={cat.name}
+                  className={`bg-gradient-to-br ${cat.from} ${cat.to} rounded-2xl p-5 text-white hover:scale-[1.02] transition-transform duration-200 cursor-default`}
+                >
+                  <div className="text-xs font-bold uppercase tracking-wide mb-1 text-white/70">
+                    Category
+                  </div>
+                  <div className="text-base font-bold mb-0.5">{cat.name}</div>
+                  <div className="text-xs text-white/60 mb-3">{cat.sub}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white/80">Market rate</span>
+                    <span className="text-sm font-bold text-white">{cat.range}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Live Activity Feed */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-white/70 uppercase tracking-wide">Recent Activity</span>
+                <span className="text-xs text-blue-300">Updated just now</span>
+              </div>
+              {liveActivity.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`} />
+                    <div>
+                      <div className="text-xs font-semibold text-white">{item.event}</div>
+                      <div className="text-xs text-white/45 mt-0.5">{item.detail}</div>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-white shrink-0 ml-4">{item.amount}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom strip */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: <TrendingUp className="w-4 h-4 text-green-400" />, label: "Avg. Recovery", value: "+18%" },
+                { icon: <Gavel className="w-4 h-4 text-brand-accent" />, label: "Auctions Today", value: "14 Live" },
+                { icon: <CheckCircle className="w-4 h-4 text-blue-400" />, label: "Verified Users", value: "1,284+" },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                  <div className="flex justify-center mb-1.5">{stat.icon}</div>
+                  <div className="text-base font-bold text-white">{stat.value}</div>
+                  <div className="text-xs text-white/50 mt-0.5">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Floating badge */}
+            <div className="absolute -left-14 top-[30%] bg-white rounded-xl p-4 shadow-xl flex items-center gap-3 animate-[bounce_4s_infinite]">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
               <div>
                 <div className="text-sm font-bold text-green-600">+18% Revenue</div>
-                <div className="text-xs text-gray-500">vs last month</div>
-              </div>
-            </div>
-
-            <div className="absolute bottom-[20%] -right-8 bg-white rounded-xl p-4 shadow-xl flex items-center gap-3 animate-[bounce_5s_infinite]">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Gavel className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-foreground">Live Auction</div>
-                <div className="text-xs text-gray-500">₹37,800/MT · 14 bidders</div>
+                <div className="text-xs text-gray-500">vs last quarter</div>
               </div>
             </div>
 

@@ -13,6 +13,7 @@ import MaterialTable from "../../components/common/MaterialTable";
 import { buyersRegistryTableConfig } from "../../configs/tables/buyersRegistryTable.config";
 import {getBuyers, updateBuyerStatus} from "../../core/services/buyer.service";
 import Loader from "../../components/common/Loader";
+import Toast from "../../components/common/Toast";
 
 const STATUSES = ["All statuses", "Approved", "Pending", "Rejected", "Suspended"];
 const TYPES = ["All types", "Recycler", "Steel Plant", "Plastics", "Refinery", "Paper", "General"];
@@ -45,8 +46,9 @@ const Buyers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
+  const [page] = useState(1);
+  const [_totalRecords, setTotalRecords] = useState(0);
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   // Top Filter States
   const [showFilters, setShowFilters] = useState(false);
@@ -125,9 +127,8 @@ const Buyers = () => {
   };
 
   // Fetch buyers from the real admin endpoint
-  useEffect(() => {
-    Promise.resolve().then(fetchBuyers);
-  }, [page, filters.status, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { Promise.resolve().then(fetchBuyers); }, [page, filters.status, search]);
 
   // Dynamic Location List
   const locationsList = useMemo(() => {
@@ -177,10 +178,11 @@ const Buyers = () => {
         selected.map((id) => updateBuyerStatus(id, { accountState: "ACTIVE" }))
       );
       setSelected([]);
+      setToast({ message: `Approved ${selected.length} selected buyer(s)`, type: "success" });
       fetchBuyers();
     } catch (err) {
       console.error("Failed to approve buyers:", err);
-      alert(err.response?.data?.message || "Failed to approve selected buyers.");
+      setToast({ message: err.response?.data?.message || "Failed to approve selected buyers.", type: "error" });
     }
   };
 
@@ -190,15 +192,16 @@ const Buyers = () => {
         selected.map((id) => updateBuyerStatus(id, { accountState: "REJECTED" }))
       );
       setSelected([]);
+      setToast({ message: `Rejected ${selected.length} selected buyer(s)`, type: "success" });
       fetchBuyers();
     } catch (err) {
       console.error("Failed to reject buyers:", err);
-      alert(err.response?.data?.message || "Failed to reject selected buyers.");
+      setToast({ message: err.response?.data?.message || "Failed to reject selected buyers.", type: "error" });
     }
   };
 
   const handleExportSelected = () => {
-    alert(`Exporting ${selected.length} selected buyers...`);
+    setToast({ message: `Exporting ${selected.length} selected buyers...`, type: "info" });
   };
 
   const clearFilters = () => {
@@ -226,9 +229,10 @@ const Buyers = () => {
         await updateBuyerStatus(editBuyer.id, {
           accountState: STATUS_TO_BACKEND[editBuyer.status],
         });
+        setToast({ message: `Updated buyer status to ${editBuyer.status}`, type: "success" });
       } catch (err) {
         console.error("Failed to update buyer status:", err);
-        alert(err.response?.data?.message || "Failed to update buyer status.");
+        setToast({ message: err.response?.data?.message || "Failed to update buyer status.", type: "error" });
         return;
       }
     }
@@ -479,7 +483,7 @@ const Buyers = () => {
           </div>
 
           <button
-            onClick={() => alert("Exporting buyer list...")}
+            onClick={() => setToast({ message: "Exporting buyer list...", type: "info" })}
             className="flex items-center space-x-1.5 px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-xs sm:text-sm text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
           >
             <Download className="w-4 h-4 text-slate-500" />
@@ -772,6 +776,12 @@ const Buyers = () => {
         </div>
       )}
 
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, message: "" })}
+      />
     </div>
   );
 };

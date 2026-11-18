@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -6,29 +6,20 @@ import {
   Copy,
   Trash2,
   ChevronDown,
-  CheckCircle,
-  Eye,
   Edit2,
   X,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
-  Box,
   CheckCircle2,
-  Tag,
-  IndianRupee,
-  Package,
-  ArrowLeft,
   Upload,
-  Save,
-  Send
 } from "lucide-react";
 
 import MaterialTable from "../../components/common/MaterialTable";
 import AddScrapModal from "../../components/common/AddScrapModal";
+import CreateListingModal from "../../components/dealer/CreateListingModal";
 import ApiService from "../../core/services/api.service";
+import { useAuthStore } from "../../store/authStore";
 
-import { dealerTableConfig } from "../../configs/tables/dealerTable.config";
+// dealerTableConfig removed (unused)
 import { myScrapTableConfig } from "../../configs/tables/myScrapTable.config";
 
 
@@ -83,12 +74,15 @@ const getStatusStyle = (status) => {
 };
 
 const ScrapInventory = () => {
+  const { user } = useAuthStore();
+  const companyName = user?.organisation?.companyName || "My Inventory";
+
   // Inventory state (dynamically fetched from database)
   const [scrapList, setScrapList] = useState([]);
 
   const [dbCategories, setDbCategories] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,9 +94,10 @@ const ScrapInventory = () => {
   const [viewingItem, setViewingItem] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [sellingScrap, setSellingScrap] = useState(null);
 
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  const [_currentPage, _setCurrentPage] = useState(1);
 
   // Toast state
   const [toastMsg, setToastMsg] = useState("");
@@ -111,11 +106,6 @@ const ScrapInventory = () => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 3500);
   };
-
-  useEffect(() => {
-    fetchScraps();
-    fetchCategories();
-  }, []);
 
   const fetchCategories = async () => {
     try {
@@ -156,13 +146,13 @@ const ScrapInventory = () => {
             categoryId: record.categoryId,
             weightKg: `${availKg.toLocaleString("en-IN")} kg`,
             weightRawKg: availKg,
-            qtyUnit: `${qtyRawMT.toFixed(2)} MT`,
+            qtyUnit: `${qtyRawMT.toFixed(2)} Tons`,
             qtyRawMT: qtyRawMT,
             condition: record.condition || "Grade A",
-            location: record.locationLabel || "Warehouse A",
-            expPriceMT: "₹35,000",
-            expPriceRaw: 35000,
-            totalValue: qtyRawMT * 35000,
+            location: record.locationLabel || "—",
+            expPriceMT: "—",
+            expPriceRaw: 0,
+            totalValue: 0,
             status: statusLabel,
             imageUrl:
               record.images && record.images.length > 0
@@ -174,6 +164,9 @@ const ScrapInventory = () => {
               year: "numeric",
             }),
             rawRecord: record,
+            availableQty: availKg,
+            fromSale: !!record.sourceSaleId,
+            fromTenderAward: !!record.sourceTenderAwardId,
           };
         });
         setScrapList(formatted);
@@ -185,6 +178,9 @@ const ScrapInventory = () => {
     }
 
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchScraps(); fetchCategories(); }, []);
 
   // Metrics Calculation (dynamic) matching Dealer Dashboard stat cards
   const metrics = useMemo(() => {
@@ -207,7 +203,7 @@ const ScrapInventory = () => {
       available,
       listed,
       sold,
-      totalWeight: `${totalWeightMT.toFixed(1)} MT`,
+      totalWeight: `${totalWeightMT.toFixed(1)} Tons`,
       estValue: `₹${totalValue.toLocaleString("en-IN")}`,
     };
   }, [scrapList]);
@@ -247,7 +243,7 @@ const ScrapInventory = () => {
   };
 
   // Selection handlers
-  const handleSelectAll = (e) => {
+  const _handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedIds(filteredItems.map((item) => item.id));
     } else {
@@ -255,14 +251,14 @@ const ScrapInventory = () => {
     }
   };
 
-  const handleSelectOne = (id) => {
+  const _handleSelectOne = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
   // CRUD Operations
-  const handleAddScrap = async (newLot) => {
+  const _handleAddScrap = async (newLot) => {
     try {
       const payload = {
         categoryId: newLot.categoryId || (dbCategories[0]?.id || undefined),
@@ -323,28 +319,33 @@ const ScrapInventory = () => {
     showToast(`Deleted ${item.id} from inventory.`);
   };
 
-  const handleDuplicateScrap = (item) => {
-    const nextNum = Math.floor(100 + Math.random() * 900);
-    const duplicated = {
-      ...item,
-      id: `INV-0${nextNum}`,
-      material: `${item.material} (Copy)`,
-      status: "Available",
-      dateAdded: new Date().toLocaleDateString("en-IN", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-    };
-    setScrapList((prev) => [duplicated, ...prev]);
-    showToast(`Duplicated ${item.id} as new lot ${duplicated.id}`);
+  const handleDuplicateScrap = async (item) => {
+    try {
+      await ApiService.createScrap({
+        description: `${item.material} (Copy)`,
+        categoryId: item.categoryId,
+        totalQuantityKg: item.weightRawKg,
+        condition: item.condition,
+        locationLabel: item.location !== "—" ? item.location : undefined,
+      });
+      showToast(`Duplicated ${item.material} as new record.`);
+      fetchScraps();
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Failed to duplicate item.", "error");
+    }
   };
 
 
-  const handleBulkDelete = () => {
-    setScrapList((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
-    setSelectedIds([]);
-    showToast(`Deleted ${selectedIds.length} selected items.`);
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    try {
+      await Promise.all(selectedIds.map((id) => ApiService.deleteScrap(id)));
+      setSelectedIds([]);
+      showToast(`Deleted ${count} selected items.`);
+      fetchScraps();
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Failed to delete some items.", "error");
+    }
   };
 
   // CSV Export
@@ -355,7 +356,7 @@ const ScrapInventory = () => {
         : filteredItems;
 
     if (itemsToExport.length === 0) {
-      alert("No scrap items to export.");
+      showToast("No scrap items to export.");
       return;
     }
 
@@ -364,10 +365,10 @@ const ScrapInventory = () => {
       "Material Name",
       "Category",
       "Weight (kg)",
-      "Qty (MT)",
+      "Qty (Tons)",
       "Condition",
       "Location",
-      "Exp Price (₹/MT)",
+      "Exp Price (₹/Tons)",
       "Status",
       "Date Logged"
     ];
@@ -401,7 +402,7 @@ const ScrapInventory = () => {
     showToast(`Exported ${itemsToExport.length} scrap items to CSV!`);
   };
 
-  const isAllSelected =
+  const _isAllSelected =
     filteredItems.length > 0 &&
     filteredItems.every((item) => selectedIds.includes(item.id));
 
@@ -427,7 +428,7 @@ const ScrapInventory = () => {
           </div>
 
           <h1 className="text-xl font-bold text-foreground">
-            Shaikh Metals & Alloys
+            {companyName}
           </h1>
 
           <p className="mt-1 text-sm text-muted-foreground">
@@ -624,6 +625,8 @@ const ScrapInventory = () => {
         onView={(item) => setViewingItem(item)}
         onEdit={(item) => setEditingItem(item)}
         onDelete={handleDeleteScrap}
+        onSell={(item) => setSellingScrap(item)}
+        canSell={() => true}
         enableRowSelection
         rowSelection={rowSelection}
         onRowSelectionChange={handleRowSelectionChange}
@@ -652,6 +655,18 @@ const ScrapInventory = () => {
           item={editingItem}
           onClose={() => setEditingItem(null)}
           onUpdate={handleUpdateScrap}
+        />
+      )}
+
+      {/* ================= CREATE LISTING MODAL ================= */}
+      {sellingScrap && (
+        <CreateListingModal
+          scrap={sellingScrap}
+          onClose={() => setSellingScrap(null)}
+          onSuccess={(msg) => {
+            setSellingScrap(null);
+            showToast(msg);
+          }}
         />
       )}
 
@@ -713,7 +728,7 @@ const EditScrapModal = ({ isOpen, item, onClose, onUpdate }) => {
     ...item,
     expPriceMT: item.expPriceMT.replace("₹", "").trim(),
     weightKg: item.weightKg.replace("kg", "").trim(),
-    qtyUnit: item.qtyUnit.replace("MT", "").trim()
+    qtyUnit: item.qtyUnit.replace("Tons", "").trim()
   });
 
   if (!isOpen || !item) return null;
@@ -733,7 +748,7 @@ const EditScrapModal = ({ isOpen, item, onClose, onUpdate }) => {
       status: formData.status,
       weightKg: `${rawWeight.toLocaleString("en-IN")} kg`,
       weightRawKg: rawWeight,
-      qtyUnit: `${rawQtyMT} MT`,
+      qtyUnit: `${rawQtyMT} Tons`,
       qtyRawMT: rawQtyMT,
       expPriceMT: `₹${rawPrice.toLocaleString("en-IN")}`,
       expPriceRaw: rawPrice,
@@ -834,7 +849,7 @@ const EditScrapModal = ({ isOpen, item, onClose, onUpdate }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-slate-700 mb-1">Expected Price (₹/MT)</label>
+              <label className="block font-medium text-slate-700 mb-1">Expected Price (₹/Ton)</label>
               <input
                 type="text"
                 value={formData.expPriceMT}
@@ -982,7 +997,7 @@ const ViewScrapModal = ({ isOpen, item, onClose, onEdit }) => {
             ₹{calculatedTotal > 0 ? calculatedTotal.toLocaleString("en-IN") : "N/A"}
           </div>
           <div className="text-xs text-slate-500 mt-2">
-            Exp. Price: {item.expPriceMT} / MT · Weight: {item.weightKg}
+            Exp. Price: {item.expPriceMT} / Ton · Weight: {item.weightKg}
           </div>
         </div>
 
@@ -1063,7 +1078,7 @@ const ViewScrapModal = ({ isOpen, item, onClose, onEdit }) => {
             </div>
 
             <div className="p-3.5 flex items-center justify-between">
-              <span className="font-medium text-slate-500">Expected Price / MT</span>
+              <span className="font-medium text-slate-500">Expected Price / Ton</span>
               <span className="font-bold text-slate-900">{item.expPriceMT}</span>
             </div>
 

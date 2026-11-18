@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   IndianRupee,
   Clock,
-  ChevronRight,
   Filter,
   Download,
   Loader2
@@ -25,9 +24,7 @@ import {
   ComposedChart,
   Bar,
   Line,
-  Legend,
-  LineChart,
-  BarChart
+  Legend
 } from "recharts";
 
 import StateCards from "../../components/dashboard/StateCards";
@@ -167,7 +164,7 @@ const SuperAdminDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
           <div className="mb-6">
             <h2 className="text-base font-bold text-gray-900">Trade Volume vs. Revenue</h2>
-            <p className="text-xs text-gray-500 mt-1">Dual-axis correlation of MT traded vs Platform Revenue (Lakhs)</p>
+            <p className="text-xs text-gray-500 mt-1">Dual-axis correlation of Tons traded vs Platform Revenue (Lakhs)</p>
           </div>
           <div className="h-[250px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -186,7 +183,7 @@ const SuperAdminDashboard = () => {
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
 
-                <Bar yAxisId="left" dataKey="volume" name="Volume (MT)" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                <Bar yAxisId="left" dataKey="volume" name="Volume (Tons)" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={30} />
                 <Line yAxisId="right" type="monotone" dataKey="revenue" name="Revenue (₹ L)" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
               </ComposedChart>
             </ResponsiveContainer>
@@ -223,7 +220,7 @@ const SuperAdminDashboard = () => {
             {(data?.inventoryData || []).map((entry, index) => (
               <div key={entry.name} className="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-600 font-medium">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: pieColors[index] }}></div>
-                {entry.name} ({entry.value} MT)
+                {entry.name} ({entry.value} Tons)
               </div>
             ))}
           </div>

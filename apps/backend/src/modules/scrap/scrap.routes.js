@@ -3,6 +3,7 @@ import * as scrapController from './scrap.controller.js';
 import requireAuth from '../../core/middlewares/auth.middleware.js';
 import { allowRoles } from '../../core/middlewares/role.middleware.js';
 import { validateCreateScrap, validateUpdateScrap } from './scrap.validation.js';
+import { uploadScrapImages } from '../../core/middlewares/upload.middleware.js';
 
 const router = express.Router();
 
@@ -24,7 +25,13 @@ router.put('/:id', allowRoles('INDUSTRY', 'DEALER'), validateUpdateScrap, scrapC
 // 5. Delete Scrap
 router.delete('/:id', allowRoles('INDUSTRY', 'DEALER'), scrapController.deleteScrap);
 
-// 6. Import Purchased Sale to Inventory
+// 6. Upload images for a scrap record (up to 5, max 5MB each)
+router.post('/:id/images', allowRoles('INDUSTRY', 'DEALER'), uploadScrapImages, scrapController.uploadScrapImages);
+
+// 7. Delete a specific image
+router.delete('/:id/images/:imageId', allowRoles('INDUSTRY', 'DEALER'), scrapController.deleteScrapImage);
+
+// 8. Import Purchased Sale to Inventory
 router.post('/import-sale/:saleId', allowRoles('DEALER', 'BUYER'), scrapController.importSaleToInventory);
 
 export default router;

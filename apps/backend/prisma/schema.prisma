@@ -51,6 +51,7 @@ enum ListingStatus {
   PUBLISHED
   BIDDING_CLOSED
   OFFER_ACCEPTED
+  PAYMENT_PENDING
   COMPLETED
   EXPIRED
   CANCELLED
@@ -79,12 +80,31 @@ enum BidStatus {
   WINNING
   WON
   LOST
+  CANCELLED
 }
 
 enum SaleStatus {
   ACCEPTED
+  PENDING_PAYMENT
+  PAYMENT_PROCESSING
   COMPLETED
   CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum OwnershipStatus {
+  INDUSTRY_OWNED
+  TRANSFER_PENDING
+  DEALER_OWNED
 }
 
 enum PaymentTerms {
@@ -93,6 +113,33 @@ enum PaymentTerms {
   DAYS_15
   DAYS_30
   DAYS_45
+}
+
+enum TenderStatus {
+  DRAFT
+  SCHEDULED
+  OPEN
+  CLOSED
+  UNDER_EVALUATION
+  AWARDED
+  UNSUCCESSFUL
+  CANCELLED
+}
+
+enum TenderSubmissionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ELIGIBLE
+  DISQUALIFIED
+  SELECTED
+  NOT_SELECTED
+}
+
+enum TransferStatus {
+  PENDING
+  DISPATCHED
+  IN_TRANSIT
+  COMPLETED
 }
 
 enum NotificationType {
@@ -114,6 +161,12 @@ enum NotificationType {
   AUCTION_NO_WINNER
 
   TENDER_REVEALED
+  TENDER_PUBLISHED
+  TENDER_SUBMISSION_RECEIVED
+  TENDER_EVALUATION_STARTED
+  TENDER_AWARDED
+  TENDER_NOT_AWARDED
+  TENDER_CANCELLED
 
   LISTING_EXPIRED
   SALE_ACCEPTED
@@ -121,6 +174,13 @@ enum NotificationType {
 
   INVENTORY_ADDED
   INVENTORY_UPDATED
+
+  WINNER_SELECTED
+  PAYMENT_PENDING
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  PAYMENT_EXPIRED
+  OWNERSHIP_TRANSFERRED
 }
 
 
@@ -157,6 +217,11 @@ model Organisation {
   bids           Bid[]          @relation("Bidder")
   salesAsSeller  Sale[]         @relation("SaleSeller")
   salesAsBuyer   Sale[]         @relation("SaleBuyer")
+
+  // Tender relationships
+  tenders           Tender[]           @relation("TenderOwner")
+  tenderSubmissions TenderSubmission[] @relation("TenderSubmissionDealer")
+  tenderAwards      TenderAward[]      @relation("TenderAwardDealer")
 
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -212,6 +277,13 @@ model User {
   // Sales
   acceptedSales  Sale[] @relation("SaleAcceptedBy")
   completedSales Sale[] @relation("SaleCompletedBy")
+
+  // Tenders
+  createdTenders          Tender[]           @relation("TenderCreatedBy")
+  submittedTenderOffers   TenderSubmission[] @relation("TenderSubmissionBy")
+  awardedTenders          TenderAward[]      @relation("TenderAwardBy")
+  uploadedTenderDocuments    TenderDocument[]            @relation("TenderDocumentUploadedBy")
+  uploadedTenderSubDocs      TenderSubmissionDocument[]  @relation("TenderSubDocUploadedBy")
 
   // Commission
   createdCommissionSettings CommissionSetting[] @relation("CommissionCreatedBy")
@@ -350,9 +422,16 @@ model ScrapRecord {
 
   status ScrapStatus @default(AVAILABLE)
 
-  // If this inventory originated from a purchase
+  // Legal ownership — tracks transfer pipeline independent of ownerId
+  ownershipStatus OwnershipStatus @default(INDUSTRY_OWNED)
+
+  // If this inventory originated from a purchase (quotation/auction)
   sourceSaleId String? @unique
   sourceSale   Sale? @relation("SaleSourceInventory", fields: [sourceSaleId], references: [id])
+
+  // If this inventory originated from a tender award
+  sourceTenderAwardId String?      @unique
+  sourceTenderAward   TenderAward? @relation("TenderAwardInventory", fields: [sourceTenderAwardId], references: [id])
 
   createdByUserId String?
   createdByUser   User? @relation("ScrapCreatedBy", fields: [createdByUserId], references: [id])
@@ -361,12 +440,15 @@ model ScrapRecord {
 
   listings Listing[]
 
+  tenders Tender[] @relation("TenderScrapRecord")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([ownerId, status])
   @@index([categoryId])
   @@index([sourceSaleId])
+  @@index([sourceTenderAwardId])
 }
 
 
@@ -624,6 +706,19 @@ model Sale {
 
   cancelledAt DateTime?
 
+  // Payment gate fields
+  ownershipTransferredAt DateTime?
+  paymentExpiresAt       DateTime?
+
+  // Delivery tracking (auction sales only)
+  deliveryStatus   String?   // AWAITING_DISPATCH | IN_TRANSIT | DELIVERED
+  expectedDelivery DateTime?
+  deliveredAt      DateTime?
+  deliveryNotes    String?
+
+  // Payment record (created when buyer initiates checkout)
+  payment Payment?
+
   // Inventory created from this sale
   sourceInventory ScrapRecord? @relation("SaleSourceInventory")
 
@@ -633,6 +728,49 @@ model Sale {
   @@index([sellerId, status])
   @@index([buyerId, status])
   @@index([completedAt])
+  @@index([status, paymentExpiresAt])
+}
+
+
+// =====================================================
+// PAYMENTS
+// =====================================================
+
+model Payment {
+  id                 String        @id @default(uuid())
+
+  saleId             String        @unique
+  sale               Sale          @relation(fields: [saleId], references: [id])
+
+  gateway            String        @default("MANUAL")
+  gatewayOrderId     String?       @unique
+  gatewayPaymentId   String?       @unique
+  gatewaySignature   String?
+
+  amount             Decimal
+  currency           String        @default("INR")
+  commissionAmount   Decimal?
+  netAmount          Decimal?
+
+  status             PaymentStatus @default(PENDING)
+
+  idempotencyKey     String        @unique
+
+  gatewayResponse    Json?
+  failureReason      String?
+
+  initiatedAt        DateTime      @default(now())
+  processingAt       DateTime?
+  paidAt             DateTime?
+  failedAt           DateTime?
+  expiredAt          DateTime?
+  refundedAt         DateTime?
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 
@@ -685,4 +823,179 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead, createdAt])
+}
+
+
+// =====================================================
+// TENDERS
+// =====================================================
+
+model Tender {
+  id                  String       @id @default(uuid())
+  ref                 String       @unique
+
+  ownerId             String
+  owner               Organisation @relation("TenderOwner", fields: [ownerId], references: [id])
+
+  scrapRecordId       String
+  scrapRecord         ScrapRecord  @relation("TenderScrapRecord", fields: [scrapRecordId], references: [id])
+
+  title               String
+  description         String?
+  terms               String?
+
+  quantityKg          Decimal
+  reservePricePerKg   Decimal?
+
+  locationLabel       String?
+
+  opensAt             DateTime?
+  closesAt            DateTime
+
+  status              TenderStatus @default(DRAFT)
+
+  publishedAt         DateTime?
+  closedAt            DateTime?
+  evaluationStartedAt DateTime?
+  cancelledAt         DateTime?
+
+  createdByUserId     String?
+  createdByUser       User?        @relation("TenderCreatedBy", fields: [createdByUserId], references: [id])
+
+  submissions         TenderSubmission[]
+  award               TenderAward?
+  documents           TenderDocument[]
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([ownerId, status])
+  @@index([scrapRecordId])
+  @@index([status, closesAt])
+}
+
+
+model TenderSubmission {
+  id                     String                 @id @default(uuid())
+
+  tenderId               String
+  tender                 Tender                 @relation(fields: [tenderId], references: [id])
+
+  dealerId               String
+  dealer                 Organisation           @relation("TenderSubmissionDealer", fields: [dealerId], references: [id])
+
+  pricePerKg             Decimal
+  totalValue             Decimal
+  note                   String?
+  paymentTerms           PaymentTerms?
+
+  status                 TenderSubmissionStatus @default(SUBMITTED)
+
+  submittedByUserId      String?
+  submittedByUser        User?                  @relation("TenderSubmissionBy", fields: [submittedByUserId], references: [id])
+
+  disqualificationReason String?
+  evaluationNote         String?
+
+  award                  TenderAward?
+  documents              TenderSubmissionDocument[]
+
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@unique([tenderId, dealerId])
+  @@index([tenderId, status])
+  @@index([dealerId])
+}
+
+
+model TenderAward {
+  id              String           @id @default(uuid())
+
+  tenderId        String           @unique
+  tender          Tender           @relation(fields: [tenderId], references: [id])
+
+  submissionId    String           @unique
+  submission      TenderSubmission @relation(fields: [submissionId], references: [id])
+
+  dealerId        String
+  dealer          Organisation     @relation("TenderAwardDealer", fields: [dealerId], references: [id])
+
+  finalPricePerKg Decimal
+  finalTotalValue Decimal
+  quantityKg      Decimal
+
+  selectionReason String?
+
+  awardedByUserId String?
+  awardedByUser   User?            @relation("TenderAwardBy", fields: [awardedByUserId], references: [id])
+  awardedAt       DateTime         @default(now())
+
+  paymentTerms    PaymentTerms?
+  paymentDeadline DateTime?
+  paymentStatus   PaymentStatus    @default(PENDING)
+  paidAt          DateTime?
+
+  // Physical transfer tracking
+  transferStatus      TransferStatus?   @default(PENDING)
+  transferDate        DateTime?
+  transferQtyKg       Decimal?
+  transferNotes       String?
+  transferConfirmedBy String?
+
+  // Inventory import (idempotency guard)
+  inventoryRecord     ScrapRecord? @relation("TenderAwardInventory")
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([dealerId])
+}
+
+
+// =====================================================
+// TENDER DOCUMENTS
+// =====================================================
+
+model TenderDocument {
+  id               String   @id @default(uuid())
+
+  tenderId         String
+  tender           Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+
+  originalName     String
+  storedName       String
+  mimeType         String
+  fileSizeBytes    Int
+
+  uploadedByUserId String?
+  uploadedByUser   User?    @relation("TenderDocumentUploadedBy", fields: [uploadedByUserId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@index([tenderId])
+}
+
+
+// =====================================================
+// TENDER SUBMISSION DOCUMENTS (dealer bid attachments)
+// =====================================================
+
+model TenderSubmissionDocument {
+  id               String           @id @default(uuid())
+
+  submissionId     String
+  submission       TenderSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  originalName     String
+  storedName       String
+  mimeType         String
+  fileSizeBytes    Int
+
+  uploadedByUserId String?
+  uploadedByUser   User?    @relation("TenderSubDocUploadedBy", fields: [uploadedByUserId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@index([submissionId])
 }

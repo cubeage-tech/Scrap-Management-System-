@@ -128,19 +128,34 @@ const About = () => {
   return (
     <div>
       {/* ================= HERO ================= */}
-      <section className="bg-brand text-white">
-        <div className="max-w-7xl mx-auto px-6 py-20 text-center">
-          <span className="inline-flex items-center gap-2 bg-brand-foreground/10 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-            <Sparkles className="h-4 w-4" /> Scrap Management System
+      <section className="bg-brand text-white relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{
+            backgroundImage: "linear-gradient(var(--brand-foreground) 1px, transparent 1px), linear-gradient(90deg, var(--brand-foreground) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div className="max-w-7xl mx-auto px-6 py-20 relative z-10 text-center">
+          <span className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm font-semibold mb-6 text-brand-accent">
+            <Sparkles className="h-4 w-4" /> Industrial Scrap Management Platform
           </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            About Us
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+            About SmartScrap AI
           </h1>
-          <p className="text-lg md:text-xl text-brand-foreground/80 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-blue-200 max-w-3xl mx-auto leading-relaxed">
             A digital marketplace where industries, dealers and buyers come
-            together to buy and sell scrap through transparent, fair and
-            live auctions.
+            together to buy and sell scrap through transparent, fair, and
+            efficient channels — auctions, tenders, and quotations.
           </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <a href="/signup" className="px-7 py-3 bg-brand-accent hover:bg-brand-accent/90 text-foreground font-bold rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 text-sm shadow-lg">
+              Join the Platform <ArrowRight className="h-4 w-4" />
+            </a>
+            <a href="/contact" className="px-7 py-3 border border-white/20 hover:bg-white/10 text-white font-semibold rounded-xl transition-all text-sm">
+              Contact Us
+            </a>
+          </div>
         </div>
       </section>
 
@@ -327,36 +342,45 @@ const About = () => {
               Who Can Use This Platform?
             </h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-muted rounded-2xl p-8 text-center border border-border hover:border-brand hover:shadow-lg transition-all duration-300">
-              <Factory className="h-10 w-10 text-brand mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-foreground mb-3">
-                Industries
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <Factory className="h-7 w-7 text-brand" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Industries</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
                 List your production scrap, set reserve prices and watch
-                buyers compete for your lots in live auctions.
+                buyers compete for your lots through auctions, tenders, and quotations.
               </p>
+              <a href="/signup?role=industry" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-blue-700 transition-colors">
+                Register as Industry <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
-            <div className="bg-muted rounded-2xl p-8 text-center border border-border hover:border-brand hover:shadow-lg transition-all duration-300">
-              <Handshake className="h-10 w-10 text-brand mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-foreground mb-3">
-                Dealers
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Access a steady pipeline of industrial scrap, bid
-                competitively and grow your trading business digitally.
+            <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <Handshake className="h-7 w-7 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Dealers</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
+                Access a steady pipeline of industrial scrap, submit offers in tenders,
+                bid in auctions and grow your trading business digitally.
               </p>
+              <a href="/signup?role=dealer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-blue-700 transition-colors">
+                Register as Dealer <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
-            <div className="bg-muted rounded-2xl p-8 text-center border border-border hover:border-brand hover:shadow-lg transition-all duration-300">
-              <Wallet className="h-10 w-10 text-brand mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-foreground mb-3">
-                Buyers
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+            <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <Wallet className="h-7 w-7 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">Buyers</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-5">
                 Source quality scrap at transparent market prices with
-                verified sellers and secure payment flow.
+                verified sellers, competitive quotes, and a secure purchase flow.
               </p>
+              <a href="/signup?role=buyer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-blue-700 transition-colors">
+                Register as Buyer <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
           </div>
         </div>

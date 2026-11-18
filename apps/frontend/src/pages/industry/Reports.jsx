@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { Download, FileText, Package, TrendingUp, DollarSign, Activity } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Download, Package, TrendingUp, DollarSign, Activity } from "lucide-react";
 import ApiService from "../../core/services/api.service";
 
 const IndustryReports = () => {
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  const [_error, setError] = useState(null);
 
   const fetchReports = async () => {
     try {
@@ -22,30 +18,14 @@ const IndustryReports = () => {
       }
     } catch (err) {
       console.error("Error fetching industry reports:", err);
-      // Fallback mock data if server error or dev mode
-      setReports({
-        kpis: {
-          totalScrapKg: 154000,
-          totalListedKg: 120000,
-          totalSoldKg: 95000,
-          availableStockKg: 34000,
-          totalRevenue: 4850000,
-          totalSalesCount: 18
-        },
-        categoryPerformance: [
-          { category: "Heavy Steel", soldKg: 45000, revenue: 2250000, count: 8 },
-          { category: "Copper Wire", soldKg: 15000, revenue: 1500000, count: 4 },
-          { category: "Aluminium Sheets", soldKg: 35000, revenue: 1100000, count: 6 }
-        ],
-        salesHistory: [
-          { id: "SALE-101", buyerName: "Apex Metals", quantityKg: 12000, pricePerKg: 50, totalValue: 600000, completedAt: "2026-08-28" },
-          { id: "SALE-102", buyerName: "Metro Recycling", quantityKg: 8000, pricePerKg: 120, totalValue: 960000, completedAt: "2026-08-25" }
-        ]
-      });
+      setError(err.message || "Failed to load industry reports");
     } finally {
       setLoading(false);
     }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchReports(); }, []);
 
   const handleExportCSV = () => {
     if (!reports?.salesHistory) return;
@@ -113,7 +93,7 @@ const IndustryReports = () => {
                 <Package className="h-5 w-5" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-black text-slate-900">{(kpis.totalScrapKg / 1000).toFixed(1)} MT</p>
+            <p className="mt-2 text-2xl font-black text-slate-900">{(kpis.totalScrapKg / 1000).toFixed(1)} Tons</p>
             <p className="mt-1 text-xs text-slate-500">{kpis.totalScrapKg?.toLocaleString()} kg recorded</p>
           </div>
 
@@ -124,7 +104,7 @@ const IndustryReports = () => {
                 <TrendingUp className="h-5 w-5" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-black text-slate-900">{(kpis.totalSoldKg / 1000).toFixed(1)} MT</p>
+            <p className="mt-2 text-2xl font-black text-slate-900">{(kpis.totalSoldKg / 1000).toFixed(1)} Tons</p>
             <p className="mt-1 text-xs text-purple-600 font-medium">
               {kpis.totalScrapKg > 0 ? ((kpis.totalSoldKg / kpis.totalScrapKg) * 100).toFixed(1) : 0}% Conversion Rate
             </p>
@@ -137,7 +117,7 @@ const IndustryReports = () => {
                 <Activity className="h-5 w-5" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-black text-slate-900">{(kpis.availableStockKg / 1000).toFixed(1)} MT</p>
+            <p className="mt-2 text-2xl font-black text-slate-900">{(kpis.availableStockKg / 1000).toFixed(1)} Tons</p>
             <p className="mt-1 text-xs text-amber-700 font-medium">Ready for Listing</p>
           </div>
         </div>

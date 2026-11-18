@@ -10,7 +10,7 @@ export const dealerCategoryPerformanceColumns = [
   },
   { accessorKey: "listed", header: "TOTAL LISTED" },
   { accessorKey: "sold", header: "TOTAL SOLD" },
-  { accessorKey: "price", header: "AVG. PRICE/MT" },
+  { accessorKey: "price", header: "AVG. PRICE/Ton" },
   {
     accessorKey: "revenue",
     header: "REVENUE",

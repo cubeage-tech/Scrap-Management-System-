@@ -27,6 +27,12 @@ class ServerUrl {
   static API_LOGOUT =
     `${ServerUrl.API_MODULE_AUTH}/logout`;
 
+  static API_FORGOT_PASSWORD =
+    `${ServerUrl.API_MODULE_AUTH}/forgot-password`;
+
+  static API_RESET_PASSWORD =
+    `${ServerUrl.API_MODULE_AUTH}/reset-password`;
+
   static API_REQUEST_OTP =
     `${ServerUrl.API_MODULE_AUTH}/request-otp`;
 
@@ -70,6 +76,14 @@ class ServerUrl {
   // DELETE /api/scrap/:id
   static API_DELETE_SCRAP = (id) =>
     `${ServerUrl.API_MODULE_SCRAP}/${id}`;
+
+  // POST /api/scrap/:id/images
+  static API_UPLOAD_SCRAP_IMAGES = (id) =>
+    `${ServerUrl.API_MODULE_SCRAP}/${id}/images`;
+
+  // DELETE /api/scrap/:id/images/:imageId
+  static API_DELETE_SCRAP_IMAGE = (id, imageId) =>
+    `${ServerUrl.API_MODULE_SCRAP}/${id}/images/${imageId}`;
 
   // =========================================================
   // CATEGORY
@@ -145,7 +159,7 @@ class ServerUrl {
   // AUCTION
   // =========================================================
 
-  static API_MODULE_AUCTION = "auction";
+  static API_MODULE_AUCTION = "marketplace/auctions";
 
   static API_GET_AUCTIONS =
     `${ServerUrl.API_MODULE_AUCTION}`;
@@ -157,13 +171,72 @@ class ServerUrl {
   // TENDER
   // =========================================================
 
-  static API_MODULE_TENDER = "tender";
+  static API_MODULE_TENDER = "marketplace/tenders";
 
   static API_GET_TENDERS =
     `${ServerUrl.API_MODULE_TENDER}`;
 
   static API_GET_TENDER_BY_ID = (id) =>
     `${ServerUrl.API_MODULE_TENDER}/${id}`;
+
+  static API_CREATE_TENDER =
+    `${ServerUrl.API_MODULE_TENDER}`;
+
+  static API_UPDATE_TENDER = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}`;
+
+  static API_PUBLISH_TENDER = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/publish`;
+
+  static API_START_TENDER_EVALUATION = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/start-evaluation`;
+
+  static API_UPDATE_TENDER_SUBMISSION = (id, submissionId) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/submissions/${submissionId}`;
+
+  static API_AWARD_TENDER = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/award`;
+
+  static API_CANCEL_TENDER = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/cancel`;
+
+  static API_GET_TENDER_SUBMISSIONS = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/submissions`;
+
+  static API_GET_MY_TENDER_SUBMISSION = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/my-submission`;
+
+  static API_SUBMIT_TENDER_OFFER = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/submit-offer`;
+
+  static API_GET_TENDER_DOCUMENTS = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/documents`;
+
+  static API_UPLOAD_TENDER_DOCUMENT = (id) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/documents`;
+
+  static API_DOWNLOAD_TENDER_DOCUMENT = (id, docId) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/documents/${docId}/download`;
+
+  static API_DELETE_TENDER_DOCUMENT = (id, docId) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/documents/${docId}`;
+
+  static API_UPLOAD_SUBMISSION_DOCUMENT = (id, submissionId) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/submissions/${submissionId}/documents`;
+
+  static API_LIST_SUBMISSION_DOCUMENTS = (id, submissionId) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/submissions/${submissionId}/documents`;
+
+  static API_DOWNLOAD_SUBMISSION_DOCUMENT = (id, submissionId, docId) =>
+    `${ServerUrl.API_MODULE_TENDER}/${id}/submissions/${submissionId}/documents/${docId}/download`;
+
+  // Award workflow
+  static API_GET_MY_TENDER_AWARDS      = `${ServerUrl.API_MODULE_TENDER}/my-awards`;
+  static API_GET_TENDER_AWARD          = (id) => `${ServerUrl.API_MODULE_TENDER}/${id}/award`;
+  static API_INITIATE_AWARD_PAYMENT    = (id) => `${ServerUrl.API_MODULE_TENDER}/${id}/award/pay`;
+  static API_VERIFY_AWARD_PAYMENT      = (id) => `${ServerUrl.API_MODULE_TENDER}/${id}/award/pay/verify`;
+  static API_CONFIRM_AWARD_TRANSFER    = (id) => `${ServerUrl.API_MODULE_TENDER}/${id}/award/transfer`;
+  static API_IMPORT_AWARD_TO_INVENTORY = (id) => `${ServerUrl.API_MODULE_TENDER}/${id}/award/import`;
 
   // =========================================================
   // ADMIN
@@ -223,12 +296,40 @@ class ServerUrl {
   static API_IMPORT_SALE_TO_INVENTORY = (saleId) =>
     `${ServerUrl.API_MODULE_SCRAP}/import-sale/${saleId}`;
 
+  // Industry Dashboard
+  static API_MODULE_INDUSTRY = "industry";
+  static API_INDUSTRY_DASHBOARD = `${ServerUrl.API_MODULE_INDUSTRY}/dashboard`;
+
+  // Sales Orders
+  static API_MODULE_SALES = "marketplace/sales";
+  static API_GET_SALES = `${ServerUrl.API_MODULE_SALES}`;
+  static API_GET_SALE_BY_ID = (id) => `${ServerUrl.API_MODULE_SALES}/${id}`;
+  static API_UPDATE_SALE_STATUS = (id) => `${ServerUrl.API_MODULE_SALES}/${id}/status`;
+  static API_COMPLETE_SALE = (id) => `${ServerUrl.API_MODULE_SALES}/${id}/complete`;
+  static API_UPDATE_SALE_DELIVERY = (id) => `${ServerUrl.API_MODULE_SALES}/${id}/delivery`;
+
+  // Auction Actions
+  static API_CREATE_AUCTION = `${ServerUrl.API_MODULE_AUCTION}`;
+  static API_START_AUCTION = (id) => `${ServerUrl.API_MODULE_AUCTION}/${id}/start`;
+  static API_CLOSE_AUCTION = (id) => `${ServerUrl.API_MODULE_AUCTION}/${id}/close`;
+  static API_PLACE_BID = (id) => `${ServerUrl.API_MODULE_AUCTION}/${id}/bid`;
+  static API_GET_MY_BIDS = `${ServerUrl.API_MODULE_AUCTION}/bids/my`;
+
   // Reports
   static API_MODULE_REPORTS = "reports";
   static API_GET_INDUSTRY_REPORTS = `${ServerUrl.API_MODULE_REPORTS}/industry`;
   static API_GET_DEALER_REPORTS = `${ServerUrl.API_MODULE_REPORTS}/dealer`;
   static API_GET_BUYER_REPORTS = `${ServerUrl.API_MODULE_REPORTS}/buyer`;
   static API_GET_ADMIN_REPORTS = `${ServerUrl.API_MODULE_REPORTS}/admin`;
+
+  // Payments
+  static API_MODULE_PAYMENT = "marketplace/payments";
+  static API_INITIATE_PAYMENT = `${ServerUrl.API_MODULE_PAYMENT}/initiate`;
+  static API_VERIFY_PAYMENT = `${ServerUrl.API_MODULE_PAYMENT}/verify`;
+  static API_GET_PAYMENT_BY_SALE = (saleId) => `${ServerUrl.API_MODULE_PAYMENT}/${saleId}`;
+
+  // Auction cancel
+  static API_CANCEL_AUCTION = (id) => `${ServerUrl.API_MODULE_AUCTION}/${id}/cancel`;
 }
 
 export default ServerUrl;

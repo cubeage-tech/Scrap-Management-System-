@@ -23,7 +23,7 @@ const MyScrap = () => {
   const [scrapList, setScrapList] = useState([]);
 
   const [selectedIds, setSelectedIds] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
   
   // Filter & Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,10 +43,6 @@ const MyScrap = () => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 3500);
   };
-
-  useEffect(() => {
-    fetchScraps();
-  }, []);
 
   const fetchScraps = async () => {
     try {
@@ -76,7 +72,7 @@ const MyScrap = () => {
             categoryId: record.categoryId,
             weightKg: `${availKg.toLocaleString("en-IN")} kg`,
             weightRawKg: availKg,
-            qtyUnit: `${qtyRawMT.toFixed(2)} MT`,
+            qtyUnit: `${qtyRawMT.toFixed(2)} Tons`,
             qtyRawMT: qtyRawMT,
             condition: record.condition || "Grade A",
             location: record.locationLabel || "Warehouse A",
@@ -105,6 +101,9 @@ const MyScrap = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchScraps(); }, []);
+
   // Metrics Calculation (dynamic from current list)
   const metrics = useMemo(() => {
     const totalItems = scrapList.length;
@@ -120,7 +119,7 @@ const MyScrap = () => {
       available,
       listed,
       sold,
-      totalWeight: `${totalWeightMT.toFixed(1)} MT`,
+      totalWeight: `${totalWeightMT.toFixed(1)} Tons`,
       estValue: `₹${totalValue.toLocaleString('en-IN')}`
     };
   }, [scrapList]);
@@ -161,7 +160,7 @@ const MyScrap = () => {
   };
 
   // CRUD Operations
-  const handleAddScrap = async (newLot) => {
+  const _handleAddScrap = async (newLot) => {
     try {
       const payload = {
         categoryId: newLot.categoryId || undefined,
@@ -248,11 +247,11 @@ const MyScrap = () => {
       : filteredItems;
 
     if (itemsToExport.length === 0) {
-      alert("No scrap items to export.");
+      showToast("No scrap items to export.");
       return;
     }
 
-    const headers = ["Inventory ID", "Material Name", "Category", "Weight (kg)", "Qty (MT)", "Condition", "Location", "Exp Price (₹/MT)", "Total Value (₹)", "Status", "Date Logged"];
+    const headers = ["Inventory ID", "Material Name", "Category", "Weight (kg)", "Qty (Tons)", "Condition", "Location", "Exp Price (₹/Ton)", "Total Value (₹)", "Status", "Date Logged"];
     const rows = itemsToExport.map(item => [
       `"${item.id}"`,
       `"${item.material.replace(/"/g, '""')}"`,

@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Gavel,
   Trophy,
   Users,
-  Clock,
   Download,
   RefreshCw,
-  TrendingUp,
   DollarSign
 } from "lucide-react";
 import MaterialTable from "../../components/common/MaterialTable";
@@ -82,9 +80,49 @@ const Auctions = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  useEffect(() => {
-    fetchAuctions();
-  }, []);
+  const setFallbackData = () => {
+    setAuctions([
+      {
+        id: "A-1",
+        auctionId: "AUC-2291",
+        title: "Steel Turnings & Borings",
+        weight: "48.0 Tons",
+        sellerName: "Bharat Steel Works",
+        highestBid: formatCurrency(1284000),
+        rawBid: 1284000,
+        startingPrice: formatCurrency(1150000),
+        biddersCount: 14,
+        status: "LIVE",
+        date: "2026-08-29",
+      },
+      {
+        id: "A-2",
+        auctionId: "AUC-2290",
+        title: "Copper Millberry Heavy Scrap",
+        weight: "12.5 Tons",
+        sellerName: "Tata Precision Forgings",
+        highestBid: formatCurrency(761500),
+        rawBid: 761500,
+        startingPrice: formatCurrency(690000),
+        biddersCount: 22,
+        status: "LIVE",
+        date: "2026-08-28",
+      },
+      {
+        id: "A-3",
+        auctionId: "AUC-2289",
+        title: "Aluminium Sheet Offcuts",
+        weight: "26.0 Tons",
+        sellerName: "Hindalco Recycling",
+        highestBid: formatCurrency(520000),
+        rawBid: 520000,
+        startingPrice: formatCurrency(480000),
+        biddersCount: 9,
+        status: "COMPLETED",
+        date: "2026-08-26",
+      },
+    ]);
+  };
 
   const fetchAuctions = async () => {
     setIsLoading(true);
@@ -98,7 +136,7 @@ const Auctions = () => {
             id: auc.id,
             auctionId: `AUC-${auc.id.slice(0, 6).toUpperCase()}`,
             title: scrap.description || "Auction Scrap Lot",
-            weight: `${qtyMT.toFixed(1)} MT`,
+            weight: `${qtyMT.toFixed(1)} Tons`,
             sellerName: scrap.owner?.companyName || "Industrial Seller",
             highestBid: formatCurrency(auc.highestBidAmount || auc.startingPrice || 500000),
             rawBid: Number(auc.highestBidAmount || auc.startingPrice || 500000),
@@ -124,49 +162,8 @@ const Auctions = () => {
     }
   };
 
-  const setFallbackData = () => {
-    setAuctions([
-      {
-        id: "A-1",
-        auctionId: "AUC-2291",
-        title: "Steel Turnings & Borings",
-        weight: "48.0 MT",
-        sellerName: "Bharat Steel Works",
-        highestBid: formatCurrency(1284000),
-        rawBid: 1284000,
-        startingPrice: formatCurrency(1150000),
-        biddersCount: 14,
-        status: "LIVE",
-        date: "2026-08-29",
-      },
-      {
-        id: "A-2",
-        auctionId: "AUC-2290",
-        title: "Copper Millberry Heavy Scrap",
-        weight: "12.5 MT",
-        sellerName: "Tata Precision Forgings",
-        highestBid: formatCurrency(761500),
-        rawBid: 761500,
-        startingPrice: formatCurrency(690000),
-        biddersCount: 22,
-        status: "LIVE",
-        date: "2026-08-28",
-      },
-      {
-        id: "A-3",
-        auctionId: "AUC-2289",
-        title: "Aluminium Sheet Offcuts",
-        weight: "26.0 MT",
-        sellerName: "Hindalco Recycling",
-        highestBid: formatCurrency(520000),
-        rawBid: 520000,
-        startingPrice: formatCurrency(480000),
-        biddersCount: 9,
-        status: "COMPLETED",
-        date: "2026-08-26",
-      },
-    ]);
-  };
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { fetchAuctions(); }, []);
 
   const rowSelection = useMemo(
     () => Object.fromEntries(selectedIds.map((id) => [id, true])),

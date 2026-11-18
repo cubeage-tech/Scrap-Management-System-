@@ -1,19 +1,35 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Package, MapPin, IndianRupee, Clock, Loader2, ShoppingCart } from "lucide-react";
+import { Search, Package, MapPin, IndianRupee, Clock, Loader2, ShoppingCart, X, Send } from "lucide-react";
 import ApiService from "../../core/services/api.service";
+import { getStoredUser } from "../../core/services/storage.service";
+import RoutePath from "../../core/constants/routes.constant";
 
 const DealerMarketplace = () => {
   const navigate = useNavigate();
+  const currentUser = getStoredUser();
   const [listings, setListings] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sellingMode, setSellingMode] = useState("all");
 
-  useEffect(() => {
-    loadListings();
-  }, [selectedCategory, sellingMode]);
+  const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tenderLookupId, setTenderLookupId] = useState(null);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await ApiService.getCategories();
+      if (response?.data?.success) {
+        setCategories(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
 
   const loadListings = async () => {
     setIsLoading(true);
@@ -32,7 +48,7 @@ const DealerMarketplace = () => {
 
       const response = await ApiService.getListings(params);
 
-      
+
       if (response?.data?.success) {
         setListings(response.data.data || []);
       }
@@ -43,6 +59,12 @@ const DealerMarketplace = () => {
       setIsLoading(false);
     }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetchCategories(); }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadListings(); }, [selectedCategory, sellingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredListings = listings.filter((listing) => {
     const query = searchQuery.toLowerCase();
@@ -75,9 +97,69 @@ const DealerMarketplace = () => {
     );
   };
 
-  const handleMakeOffer = (listing) => {
-    // Navigate to quotation submission page
-    navigate(`/dealer/submit-quotation?listingId=${listing.id}`);
+  const handleMakeOffer = async (listing) => {
+    if (listing.sellingMode === "AUCTION") {
+      navigate(RoutePath.DEALER_LIVE_AUCTIONS);
+    } else if (listing.sellingMode === "TENDER") {
+      // Look up the matching tender by scrapRecordId so we navigate to its actual tender ID,
+      // not a scrap-name-filtered list (scrapRecordId ≠ tenderId).
+      setTenderLookupId(listing.id);
+      try {
+        const res = await ApiService.getTenders();
+        const tenders = res.data?.data || [];
+        const match = tenders.find(
+          (t) =>
+            t.scrapRecord?.id === listing.scrapRecordId &&
+            ["SCHEDULED", "OPEN"].includes(t.status)
+        );
+        if (match) {
+          navigate(`${RoutePath.DEALER_TENDERS}/${match.id}`);
+        } else {
+          navigate(RoutePath.DEALER_TENDERS);
+        }
+      } catch {
+        navigate(RoutePath.DEALER_TENDERS);
+      } finally {
+        setTenderLookupId(null);
+      }
+    } else {
+      setSelectedListing(listing);
+      setIsQuotationModalOpen(true);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsQuotationModalOpen(false);
+    setSelectedListing(null);
+  };
+
+  const handleSubmitQuotation = async (formData) => {
+    if (!selectedListing) return;
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        listingId: selectedListing.id,
+        pricePerKg: parseFloat(formData.pricePerKg),
+        quantityKg: parseFloat(formData.quantityKg),
+        paymentTerms: formData.paymentTerms || "DAYS_15",
+        note: formData.note || undefined,
+        validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : undefined,
+      };
+      const response = await ApiService.createQuotation(payload);
+      if (response?.data?.success) {
+        handleCloseModal();
+        loadListings();
+      }
+    } catch (error) {
+      console.error("Failed to submit quotation:", error);
+      const serverMsg =
+        error.response?.data?.message ||
+        (Array.isArray(error.response?.data?.errors) ? error.response.data.errors.map(e => e.message).join(", ") : null) ||
+        "Failed to submit quotation. Please check inputs.";
+      throw new Error(serverMsg, { cause: error });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -140,7 +222,11 @@ const DealerMarketplace = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Categories</option>
-              {/* Add dynamic categories here */}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -263,16 +349,30 @@ const DealerMarketplace = () => {
                 </div>
 
                 {/* Action Button */}
-                <button
-                  onClick={() => handleMakeOffer(listing)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors"
-                >
-                  {listing.sellingMode === "QUOTATION"
-                    ? "Submit Quotation"
-                    : listing.sellingMode === "AUCTION"
-                    ? "Place Bid"
-                    : "Submit Tender"}
-                </button>
+                {listing.scrapRecord?.ownerId === currentUser?.organisationId ? (
+                  <button
+                    disabled
+                    className="w-full bg-gray-100 text-gray-400 font-medium text-sm py-2.5 rounded-lg border border-gray-200 cursor-not-allowed"
+                  >
+                    Your Own Listing
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleMakeOffer(listing)}
+                    disabled={tenderLookupId === listing.id}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait text-white font-medium text-sm py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    {tenderLookupId === listing.id ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Finding tender…</>
+                    ) : listing.sellingMode === "QUOTATION" ? (
+                      "Submit Quotation"
+                    ) : listing.sellingMode === "AUCTION" ? (
+                      "Place Bid"
+                    ) : (
+                      "Submit Tender"
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -294,37 +394,44 @@ const DealerMarketplace = () => {
 
 // Quotation Submission Modal Component
 const QuotationModal = ({ listing, onClose, onSubmit, isSubmitting }) => {
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     pricePerKg: listing.expectedPricePerKg || "",
     quantityKg: listing.quantityKg || "",
-    paymentTerms: "DAYS_7",
+    paymentTerms: "DAYS_15",
     note: "",
     validUntil: "",
   });
 
   const handleChange = (e) => {
+    setError("");
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     
     // Validation
     if (!formData.pricePerKg || formData.pricePerKg <= 0) {
-      alert("Please enter a valid price per kg");
+      setError("Please enter a valid price per kg");
       return;
     }
     if (!formData.quantityKg || formData.quantityKg <= 0) {
-      alert("Please enter a valid quantity");
+      setError("Please enter a valid quantity");
       return;
     }
     if (parseFloat(formData.quantityKg) > listing.quantityKg) {
-      alert(`Quantity cannot exceed available quantity (${listing.quantityKg} kg)`);
+      setError(`Quantity cannot exceed available quantity (${listing.quantityKg} kg)`);
       return;
     }
 
-    onSubmit(formData);
+    try {
+      await onSubmit(formData);
+    } catch (err) {
+      setError(err.message || "Failed to submit quotation");
+    }
   };
 
   const totalValue = (parseFloat(formData.pricePerKg) || 0) * (parseFloat(formData.quantityKg) || 0);
@@ -347,6 +454,12 @@ const QuotationModal = ({ listing, onClose, onSubmit, isSubmitting }) => {
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {error && (
+          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* Listing Details */}
         <div className="p-6 bg-gray-50 border-b border-gray-200">

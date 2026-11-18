@@ -6,11 +6,10 @@ export const port = process.env.PORT || 5000;
 
 export const clientUrls = process.env.CLIENT_URLS
   ? process.env.CLIENT_URLS.split(",").map((url) => url.trim())
-  :[
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://your-frontend.vercel.app"
-];
+  : [
+    "http://localhost:5173",
+    "http://localhost:5174",
+  ];
 
 export const databaseUrl = process.env.DATABASE_URL;
 

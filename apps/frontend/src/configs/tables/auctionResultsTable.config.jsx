@@ -3,7 +3,7 @@
 
 import StatusBadge from "../../components/common/StatusBadge";
 
-const RESULT_VARIANTS = { Completed: "success", Pending: "warning", Rejected: "danger" };
+const RESULT_VARIANTS = { Completed: "success", Pending: "warning", Rejected: "danger", "No Winner": "neutral" };
 
 const inr = new Intl.NumberFormat("en-IN");
 const money = (value) => `₹${inr.format(value)}`;

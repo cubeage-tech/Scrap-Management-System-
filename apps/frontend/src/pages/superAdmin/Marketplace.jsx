@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Package,
-  Filter,
   Download,
   RefreshCw,
-  Search,
-  CheckCircle2,
   DollarSign,
   TrendingUp,
   Building2
@@ -92,9 +89,52 @@ const Marketplace = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  useEffect(() => {
-    fetchMarketplaceListings();
-  }, []);
+  const setFallbackData = () => {
+    setListings([
+      {
+        id: "L-101",
+        listingId: "LST-9021",
+        sellerName: "Bharat Precision Forgings",
+        sellerType: "INDUSTRY",
+        material: "MS Heavy Melting Scrap (HMS 1&2)",
+        category: "Steel",
+        quantity: "45.0 Tons",
+        askingPrice: formatCurrency(1575000),
+        rawPrice: 1575000,
+        sellingMode: "QUOTATION",
+        status: "PUBLISHED",
+        date: "2026-08-29",
+      },
+      {
+        id: "L-102",
+        listingId: "LST-9022",
+        sellerName: "Shaikh Metals Yard",
+        sellerType: "DEALER",
+        material: "Copper Armature Scrap",
+        category: "Copper",
+        quantity: "12.0 Tons",
+        askingPrice: formatCurrency(888000),
+        rawPrice: 888000,
+        sellingMode: "AUCTION",
+        status: "PUBLISHED",
+        date: "2026-08-27",
+      },
+      {
+        id: "L-103",
+        listingId: "LST-9023",
+        sellerName: "Century Rayon Plant",
+        sellerType: "INDUSTRY",
+        material: "Aluminium Wire Scrap",
+        category: "Aluminium",
+        quantity: "28.5 Tons",
+        askingPrice: formatCurrency(570000),
+        rawPrice: 570000,
+        sellingMode: "TENDER",
+        status: "COMPLETED",
+        date: "2026-08-22",
+      },
+    ]);
+  };
 
   const fetchMarketplaceListings = async () => {
     setIsLoading(true);
@@ -114,7 +154,7 @@ const Marketplace = () => {
             sellerType: scrap.owner?.businessType || "INDUSTRY",
             material: scrap.description || cat,
             category: cat,
-            quantity: `${qtyMT.toFixed(1)} MT`,
+            quantity: `${qtyMT.toFixed(1)} Tons`,
             askingPrice: formatCurrency(asking || 450000),
             rawPrice: asking || 450000,
             sellingMode: item.sellingMode || "QUOTATION",
@@ -138,52 +178,8 @@ const Marketplace = () => {
     }
   };
 
-  const setFallbackData = () => {
-    setListings([
-      {
-        id: "L-101",
-        listingId: "LST-9021",
-        sellerName: "Bharat Precision Forgings",
-        sellerType: "INDUSTRY",
-        material: "MS Heavy Melting Scrap (HMS 1&2)",
-        category: "Steel",
-        quantity: "45.0 MT",
-        askingPrice: formatCurrency(1575000),
-        rawPrice: 1575000,
-        sellingMode: "QUOTATION",
-        status: "PUBLISHED",
-        date: "2026-08-29",
-      },
-      {
-        id: "L-102",
-        listingId: "LST-9022",
-        sellerName: "Shaikh Metals Yard",
-        sellerType: "DEALER",
-        material: "Copper Armature Scrap",
-        category: "Copper",
-        quantity: "12.0 MT",
-        askingPrice: formatCurrency(888000),
-        rawPrice: 888000,
-        sellingMode: "AUCTION",
-        status: "PUBLISHED",
-        date: "2026-08-27",
-      },
-      {
-        id: "L-103",
-        listingId: "LST-9023",
-        sellerName: "Century Rayon Plant",
-        sellerType: "INDUSTRY",
-        material: "Aluminium Wire Scrap",
-        category: "Aluminium",
-        quantity: "28.5 MT",
-        askingPrice: formatCurrency(570000),
-        rawPrice: 570000,
-        sellingMode: "TENDER",
-        status: "COMPLETED",
-        date: "2026-08-22",
-      },
-    ]);
-  };
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { fetchMarketplaceListings(); }, []);
 
   const rowSelection = useMemo(
     () => Object.fromEntries(selectedIds.map((id) => [id, true])),
